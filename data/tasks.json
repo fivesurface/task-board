@@ -6,12 +6,13 @@
       "project": "Cooper Hills",
       "description": "",
       "urgency": "urgent",
-      "status": "doing",
+      "status": "todo",
       "dueDate": null,
-      "reminderDate": "2026-08-14",
+      "reminderDate": "2026-08-15",
       "screenshots": [],
       "createdAt": "2026-08-14T13:05:06.201Z",
-      "updatedAt": "2026-08-14T21:01:06.237Z"
+      "updatedAt": "2026-08-14T21:01:39.564Z",
+      "labels": []
     },
     {
       "id": "700383ef-8f0d-461d-af7c-f9ce6177bd17",
