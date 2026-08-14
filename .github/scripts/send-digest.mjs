@@ -16,11 +16,13 @@ function parisNow() {
 }
 
 const { date: today, hour } = parisNow();
+const eventName = process.env.GITHUB_EVENT_NAME || '';
 
-// Le workflow se déclenche à 7h ET 8h UTC pour couvrir le changement d'heure.
+// Le workflow planifié se déclenche à 7h ET 8h UTC pour couvrir le changement d'heure.
 // On ne veut envoyer le message qu'une seule fois, quand il est réellement 9h à Paris.
-if (hour !== 9) {
-  console.log(`Il est ${hour}h à Paris (pas 9h) — on ne fait rien pour ce déclenchement.`);
+// Un déclenchement manuel (bouton "Envoyer sur Discord" du site) envoie toujours, sans attendre 9h.
+if (eventName === 'schedule' && hour !== 9) {
+  console.log(`Il est ${hour}h à Paris (pas 9h) — on ne fait rien pour ce déclenchement planifié.`);
   process.exit(0);
 }
 

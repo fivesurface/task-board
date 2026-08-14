@@ -1,17 +1,21 @@
 import { config, SITE_PASSPHRASE, isUnlocked, unlock } from './config.js';
-import { getJsonFile, putJsonFile, putImageFile, fileToBase64 } from './github.js';
+import { getJsonFile, putJsonFile, putImageFile, fileToBase64, dispatchWorkflow } from './github.js';
 
 const TASKS_PATH = 'data/tasks.json';
+const WORKFLOW_FILE = 'daily-digest.yml';
 
 const state = {
   tasks: [],
   sha: null,
   filters: { search: '', project: '', urgency: null },
-  editingScreenshots: [], // captures de la tâche en cours d'édition dans la modale
+  editingScreenshots: [],
+  editingLabels: [],
 };
 
 const $ = (sel) => document.querySelector(sel);
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const urgencyLabel = { urgent: '🔴 Urgent', moyen: '🟡 Moyen', faible: '🟢 Faible' };
+const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 
 // ---------------------------------------------------------------------
 // Verrou léger
@@ -87,12 +91,12 @@ function setSyncStatus(text, kind) {
 }
 
 // ---------------------------------------------------------------------
-// Rendu du tableau
+// Rendu
 // ---------------------------------------------------------------------
 function getFilteredTasks() {
   const { search, project, urgency } = state.filters;
   return state.tasks.filter((t) => {
-    if (search && !(`${t.title} ${t.project} ${t.description || ''}`.toLowerCase().includes(search.toLowerCase()))) return false;
+    if (search && !(`${t.title} ${t.project} ${t.description || ''} ${(t.labels || []).join(' ')}`.toLowerCase().includes(search.toLowerCase()))) return false;
     if (project && t.project !== project) return false;
     if (urgency && t.urgency !== urgency) return false;
     return true;
@@ -102,7 +106,7 @@ function getFilteredTasks() {
 function render() {
   renderProjectFilter();
   renderBoard();
-  renderSummary();
+  renderSidebar();
 }
 
 function renderProjectFilter() {
@@ -135,6 +139,7 @@ function renderCard(task) {
   card.dataset.id = task.id;
 
   const overdue = task.dueDate && task.dueDate < todayStr() && task.status !== 'done';
+  const labels = task.labels || [];
   card.innerHTML = `
     <div class="task-card-title">${escapeHtml(task.title)}</div>
     <div class="task-card-meta">
@@ -142,6 +147,7 @@ function renderCard(task) {
       ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : '📅 '}${task.dueDate}</span>` : ''}
       ${task.screenshots?.length ? `<span class="task-shots">🖼️ ${task.screenshots.length}</span>` : ''}
     </div>
+    ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}</div>` : ''}
   `;
 
   card.addEventListener('click', () => openTaskModal(task));
@@ -153,39 +159,61 @@ function renderCard(task) {
   return card;
 }
 
-function renderSummary() {
+function renderSidebar() {
   const remaining = state.tasks.filter((t) => t.status !== 'done');
   const today = todayStr();
-  const overdueOrToday = remaining
-    .filter((t) => t.dueDate && t.dueDate <= today)
-    .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
-
-  const el = $('#summary-content');
-  if (remaining.length === 0) {
-    el.innerHTML = `<div class="summary-total">0</div><div class="summary-sub">Rien à faire 🎉</div>`;
-    return;
-  }
 
   const byUrgency = { urgent: 0, moyen: 0, faible: 0 };
   for (const t of remaining) byUrgency[t.urgency] = (byUrgency[t.urgency] || 0) + 1;
 
-  el.innerHTML = `
-    <div class="summary-total">${remaining.length}</div>
-    <div class="summary-sub">tâche(s) restante(s)</div>
-    <div class="summary-line"><span>🔴 Urgent</span><span>${byUrgency.urgent || 0}</span></div>
-    <div class="summary-line"><span>🟡 Moyen</span><span>${byUrgency.moyen || 0}</span></div>
-    <div class="summary-line"><span>🟢 Faible</span><span>${byUrgency.faible || 0}</span></div>
-    <h3 style="font-size:12px;color:var(--text-dim);margin:18px 0 8px;">À traiter aujourd'hui / en retard</h3>
-    ${overdueOrToday.length === 0
-      ? '<p class="summary-empty">Aucune échéance urgente.</p>'
-      : overdueOrToday.map((t) => `
-        <div class="summary-task-item ${t.dueDate < today ? 'overdue' : ''}" data-id="${t.id}">
-          ${escapeHtml(t.title)}<br><span class="muted">${t.dueDate}${t.project ? ' · ' + escapeHtml(t.project) : ''}</span>
-        </div>
-      `).join('')}
+  $('#stat-grid').innerHTML = `
+    <div class="stat-tile stat-tile-total">
+      <div class="stat-tile-value">${remaining.length}</div>
+      <div class="stat-tile-label">tâche(s) restante(s)</div>
+    </div>
+    <div class="stat-tile small urgent">
+      <div class="stat-tile-icon">🔴</div>
+      <div class="stat-tile-value">${byUrgency.urgent || 0}</div>
+      <div class="stat-tile-label">Urgent</div>
+    </div>
+    <div class="stat-tile small moyen">
+      <div class="stat-tile-icon">🟡</div>
+      <div class="stat-tile-value">${byUrgency.moyen || 0}</div>
+      <div class="stat-tile-label">Moyen</div>
+    </div>
+    <div class="stat-tile small faible" style="grid-column: span 2;">
+      <div class="stat-tile-icon">🟢</div>
+      <div class="stat-tile-value">${byUrgency.faible || 0}</div>
+      <div class="stat-tile-label">Faible</div>
+    </div>
   `;
 
-  el.querySelectorAll('.summary-task-item').forEach((item) => {
+  // "À traiter aujourd'hui / en retard" : tâches urgentes (peu importe la date)
+  // + tâches dont l'échéance est aujourd'hui ou dépassée.
+  const attention = remaining
+    .filter((t) => t.urgency === 'urgent' || (t.dueDate && t.dueDate <= today))
+    .sort((a, b) => {
+      const rankDiff = (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+    });
+
+  const list = $('#attention-list');
+  if (attention.length === 0) {
+    list.innerHTML = '<p class="attention-empty">Rien d\'urgent ni en retard.</p>';
+  } else {
+    list.innerHTML = attention.map((t) => {
+      const overdue = t.dueDate && t.dueDate < today;
+      return `
+        <div class="attention-item ${t.urgency} ${overdue ? 'overdue' : ''}" data-id="${t.id}">
+          <div class="attention-item-title">${escapeHtml(t.title)}</div>
+          <span class="muted">${t.dueDate ? (overdue ? '⚠️ ' + t.dueDate : t.dueDate) : urgencyLabel[t.urgency]}${t.project ? ' · ' + escapeHtml(t.project) : ''}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  list.querySelectorAll('.attention-item').forEach((item) => {
     item.addEventListener('click', () => {
       const task = state.tasks.find((t) => t.id === item.dataset.id);
       if (task) openTaskModal(task);
@@ -224,6 +252,32 @@ function bindDragAndDrop() {
 }
 
 // ---------------------------------------------------------------------
+// Étiquettes (tags)
+// ---------------------------------------------------------------------
+function renderTagChips() {
+  const el = $('#tag-chips');
+  el.innerHTML = state.editingLabels.map((label, i) => `
+    <span class="tag-chip">${escapeHtml(label)}<button type="button" data-idx="${i}">✕</button></span>
+  `).join('');
+  el.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.editingLabels.splice(Number(btn.dataset.idx), 1);
+      renderTagChips();
+    });
+  });
+}
+
+function addLabelFromInput() {
+  const input = $('#task-label-input');
+  const value = input.value.trim();
+  if (value && !state.editingLabels.includes(value)) {
+    state.editingLabels.push(value);
+    renderTagChips();
+  }
+  input.value = '';
+}
+
+// ---------------------------------------------------------------------
 // Modale tâche
 // ---------------------------------------------------------------------
 function openTaskModal(task) {
@@ -240,9 +294,13 @@ function openTaskModal(task) {
   $('#task-delete-btn').classList.toggle('hidden', isNew);
   $('#task-error').classList.add('hidden');
   $('#task-screenshots-input').value = '';
+  $('#task-label-input').value = '';
   state.editingScreenshots = task?.screenshots ? [...task.screenshots] : [];
+  state.editingLabels = task?.labels ? [...task.labels] : [];
   renderScreenshotsList();
+  renderTagChips();
   $('#task-modal').classList.remove('hidden');
+  $('#task-title').focus();
 }
 
 function closeTaskModal() {
@@ -295,6 +353,7 @@ async function handleTaskSubmit(e) {
     id,
     title: $('#task-title').value.trim(),
     project: $('#task-project').value.trim(),
+    labels: [...state.editingLabels],
     description: $('#task-description').value.trim(),
     urgency: $('#task-urgency').value,
     status: $('#task-status').value,
@@ -336,6 +395,25 @@ async function handleTaskDelete() {
 }
 
 // ---------------------------------------------------------------------
+// Envoi Discord à la demande
+// ---------------------------------------------------------------------
+async function handleDiscordNow() {
+  const btn = $('#discord-now-btn');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Envoi…';
+  try {
+    await dispatchWorkflow(config.owner, config.repo, config.token, WORKFLOW_FILE);
+    btn.textContent = 'Envoyé ✓';
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2500);
+  } catch (e) {
+    alert("Impossible de déclencher l'envoi Discord :\n" + e.message);
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------
 // Modale paramètres
 // ---------------------------------------------------------------------
 function openSettingsModal(forced = false) {
@@ -373,6 +451,27 @@ function bindGlobalEvents() {
   $('#task-form').addEventListener('submit', handleTaskSubmit);
   $('#task-delete-btn').addEventListener('click', handleTaskDelete);
   $('#task-screenshots-input').addEventListener('change', (e) => handleScreenshotUpload([...e.target.files]));
+
+  const dropzone = $('#screenshot-dropzone');
+  dropzone.addEventListener('click', () => $('#task-screenshots-input').click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'));
+    handleScreenshotUpload(files);
+  });
+
+  $('#task-label-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addLabelFromInput();
+    }
+  });
+  $('#task-label-input').addEventListener('blur', addLabelFromInput);
+
+  $('#discord-now-btn').addEventListener('click', handleDiscordNow);
 
   $('#settings-btn').addEventListener('click', () => openSettingsModal(false));
   $('#settings-modal-close').addEventListener('click', closeSettingsModal);

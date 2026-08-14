@@ -60,10 +60,12 @@ git push -u origin main
 C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date de rappel** (ou à défaut la date d'échéance) est aujourd'hui ou dépassée sera listée automatiquement dans le message Discord de 9h (heure de Paris, ajustée automatiquement été/hiver).
 
 ## Utilisation au quotidien
-- **+ Nouvelle tâche** : titre, projet, description, urgence, échéance, date de rappel, captures d'écran
+- **+ Nouvelle tâche** : titre, projet, étiquettes personnalisées, description, urgence, échéance, date de rappel, captures d'écran (glisser-déposer une image directement dans la zone prévue, ou clic pour choisir un fichier)
 - Glisser-déposer les cartes entre **À faire / En cours / Terminé**
-- La colonne de gauche résume ce qu'il te reste à faire, avec les échéances du jour ou en retard en premier
+- La barre latérale résume ce qu'il te reste à faire (par urgence) et liste ce qui est urgent ou en retard
+- **📨 Envoyer sur Discord** (en haut) déclenche l'envoi du résumé Discord immédiatement, sans attendre 9h — pratique pour tester ou pour prévenir d'un changement en cours de journée
 - Chaque modification (créer/déplacer/supprimer une tâche, ajouter une capture) crée un petit commit automatique dans le dépôt — c'est normal, c'est comme ça que les données sont sauvegardées
+- Le dépôt et le jeton restent enregistrés dans ton navigateur : pas besoin de les ressaisir à chaque visite (sauf si tu changes d'appareil ou vides le cache)
 
 ## Structure du projet
 ```

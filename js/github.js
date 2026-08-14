@@ -61,6 +61,19 @@ export async function putImageFile(owner, repo, path, token, base64Content, mess
   return `https://raw.githubusercontent.com/${owner}/${repo}/${BRANCH}/${path}`;
 }
 
+export async function dispatchWorkflow(owner, repo, token, workflowFile) {
+  const url = `${API}/repos/${owner}/${repo}/actions/workflows/${workflowFile}/dispatches`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: BRANCH }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Échec du déclenchement (${res.status})`);
+  }
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
