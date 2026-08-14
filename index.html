@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tableau de bord</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- Écran de verrouillage léger -->
+<div id="lock-screen" class="lock-screen hidden">
+  <form id="lock-form" class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <h1>Tableau de bord</h1>
+    <p class="muted">Entre le mot de passe pour continuer.</p>
+    <input type="password" id="lock-input" placeholder="Mot de passe" autocomplete="current-password" autofocus />
+    <button type="submit" class="btn btn-primary">Déverrouiller</button>
+    <p id="lock-error" class="error hidden">Mot de passe incorrect.</p>
+  </form>
+</div>
+
+<div id="app" class="app hidden">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo">✅ Tableau de bord</span>
+    </div>
+    <div class="topbar-center">
+      <input type="search" id="search-input" class="search-input" placeholder="Rechercher une tâche…" />
+      <select id="project-filter" class="select"><option value="">Tous les projets</option></select>
+      <div class="urgency-filters" id="urgency-filters">
+        <button class="chip chip-urgent" data-urgency="urgent">🔴 Urgent</button>
+        <button class="chip chip-moyen" data-urgency="moyen">🟡 Moyen</button>
+        <button class="chip chip-faible" data-urgency="faible">🟢 Faible</button>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="sync-status" class="sync-status"></span>
+      <button id="new-task-btn" class="btn btn-primary">+ Nouvelle tâche</button>
+      <button id="settings-btn" class="btn btn-icon" title="Paramètres">⚙️</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="summary-panel" id="summary-panel">
+      <h2>Il te reste</h2>
+      <div id="summary-content" class="summary-content"></div>
+    </aside>
+
+    <main class="board" id="board">
+      <section class="column" data-status="todo">
+        <h3 class="column-title">À faire <span class="count" id="count-todo">0</span></h3>
+        <div class="card-list" data-status="todo"></div>
+      </section>
+      <section class="column" data-status="doing">
+        <h3 class="column-title">En cours <span class="count" id="count-doing">0</span></h3>
+        <div class="card-list" data-status="doing"></div>
+      </section>
+      <section class="column" data-status="done">
+        <h3 class="column-title">Terminé <span class="count" id="count-done">0</span></h3>
+        <div class="card-list" data-status="done"></div>
+      </section>
+    </main>
+  </div>
+
+</div>
+
+<!-- Modale tâche -->
+<div id="task-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="task-modal-title">Nouvelle tâche</h2>
+      <button class="btn-close" id="task-modal-close">✕</button>
+    </div>
+    <form id="task-form" class="modal-body">
+      <input type="hidden" id="task-id" />
+
+      <label>Titre *
+        <input type="text" id="task-title" required placeholder="Ex: Corriger le bug d'affichage" />
+      </label>
+
+      <div class="form-row">
+        <label>Projet
+          <input type="text" id="task-project" list="project-list" placeholder="Ex: Nova Studio" />
+          <datalist id="project-list"></datalist>
+        </label>
+        <label>Urgence
+          <select id="task-urgency">
+            <option value="urgent">🔴 Urgent</option>
+            <option value="moyen" selected>🟡 Moyen</option>
+            <option value="faible">🟢 Faible</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Description
+        <textarea id="task-description" rows="4" placeholder="Détails, contexte, liens…"></textarea>
+      </label>
+
+      <div class="form-row">
+        <label>Statut
+          <select id="task-status">
+            <option value="todo">À faire</option>
+            <option value="doing">En cours</option>
+            <option value="done">Terminé</option>
+          </select>
+        </label>
+        <label>Échéance
+          <input type="date" id="task-due" />
+        </label>
+        <label>Rappel Discord
+          <input type="date" id="task-reminder" />
+        </label>
+      </div>
+      <p class="hint">La date de rappel détermine quand cette tâche apparaîtra dans le message Discord du matin. Par défaut : la date d'échéance.</p>
+
+      <label>Captures d'écran
+        <input type="file" id="task-screenshots-input" accept="image/*" multiple />
+      </label>
+      <p class="hint">L'aperçu peut mettre quelques secondes à apparaître juste après l'envoi (le temps que GitHub propage le fichier).</p>
+      <div id="task-screenshots-list" class="screenshots-list"></div>
+
+      <div class="modal-footer">
+        <button type="button" id="task-delete-btn" class="btn btn-danger hidden">Supprimer</button>
+        <div class="modal-footer-right">
+          <button type="button" id="task-cancel-btn" class="btn">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="task-save-btn">Enregistrer</button>
+        </div>
+      </div>
+      <p id="task-error" class="error hidden"></p>
+    </form>
+  </div>
+</div>
+
+<!-- Modale paramètres -->
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal modal-small">
+    <div class="modal-header">
+      <h2>Paramètres</h2>
+      <button class="btn-close" id="settings-modal-close">✕</button>
+    </div>
+    <form id="settings-form" class="modal-body">
+      <label>Propriétaire GitHub (ton nom d'utilisateur)
+        <input type="text" id="cfg-owner" placeholder="ex: lenzox" required />
+      </label>
+      <label>Nom du dépôt
+        <input type="text" id="cfg-repo" placeholder="ex: task-board" required />
+      </label>
+      <label>Jeton d'accès personnel (PAT)
+        <input type="password" id="cfg-token" placeholder="github_pat_..." required />
+      </label>
+      <p class="hint">Le jeton reste uniquement dans ton navigateur (localStorage) — jamais envoyé ailleurs qu'à l'API GitHub. Voir le README pour savoir comment le créer.</p>
+      <div class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+      <p id="settings-error" class="error hidden"></p>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
