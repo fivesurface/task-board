@@ -1,47 +1,11 @@
 {
   "ideas": [
     {
-      "id": "216efb41-a5f2-48af-b4f2-970187d8022f",
+      "id": "19876aa2-2d6f-4893-9bb6-70b1f71816a9",
       "project": "Cooper Hills",
-      "text": "gesg",
-      "createdAt": "2026-08-15T13:33:16.408Z"
-    },
-    {
-      "id": "a89d0b96-566a-4c2f-af7a-e3d3da5f54ee",
-      "project": "Cooper Hills",
-      "text": "jfjftj tf",
+      "text": "jfj",
       "images": [],
-      "createdAt": "2026-08-15T13:51:34.138Z"
-    },
-    {
-      "id": "cea158e0-62d5-41cb-9b5f-788c6c9c5fea",
-      "project": "Cooper Hills",
-      "text": "jtf",
-      "images": [],
-      "createdAt": "2026-08-15T13:51:34.738Z"
-    },
-    {
-      "id": "2937758d-0221-47ca-a091-48342f39f415",
-      "project": "Cooper Hills",
-      "text": "j",
-      "images": [],
-      "createdAt": "2026-08-15T13:51:34.889Z"
-    },
-    {
-      "id": "9f22e038-506d-4260-a685-c7ae6e89eef3",
-      "project": "Cooper Hills",
-      "text": "ft",
-      "images": [],
-      "createdAt": "2026-08-15T13:51:35.090Z"
-    },
-    {
-      "id": "6f758590-02b4-43f6-85de-97315f2f4bf4",
-      "project": "Cooper Hills",
-      "text": "jftj",
-      "images": [
-        "https://raw.githubusercontent.com/fivesurface/task-board/main/data/images/idea-1786801900629-1786801900657-Group_2656.png"
-      ],
-      "createdAt": "2026-08-15T13:51:46.434Z"
+      "createdAt": "2026-08-15T13:54:22.488Z"
     }
   ]
 }

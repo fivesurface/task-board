@@ -1,3 +1,14 @@
 {
-  "notifications": []
+  "notifications": [
+    {
+      "id": "ccf235ab-6d7f-459b-bff3-5ae261568c36",
+      "taskId": "a381c545-9424-4c8c-965a-4251b86b6911",
+      "taskTitle": "Refaire les UV des trotoir",
+      "authorMemberId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "authorName": "Thyro Le Boss",
+      "text": "jftkftktf",
+      "createdAt": "2026-08-15T13:52:07.682Z",
+      "read": true
+    }
+  ]
 }

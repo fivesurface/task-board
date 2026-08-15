@@ -11,9 +11,19 @@
       "reminderDate": "2026-08-15",
       "screenshots": [],
       "createdAt": "2026-08-14T13:05:06.201Z",
-      "updatedAt": "2026-08-15T13:42:56.025Z",
-      "labels": [],
-      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274"
+      "updatedAt": "2026-08-15T13:54:58.488Z",
+      "labels": [
+        "truhjrtu"
+      ],
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "comments": [
+        {
+          "id": "39910cd0-3d35-4c39-8b1b-146beddc1faf",
+          "authorMemberId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+          "text": "jftkftktf",
+          "createdAt": "2026-08-15T13:52:07.682Z"
+        }
+      ]
     },
     {
       "id": "700383ef-8f0d-461d-af7c-f9ce6177bd17",
