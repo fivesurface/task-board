@@ -4,18 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Tableau de bord</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%230a84ff%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2212%22 cy=%2212%22 r=%229%22/><polyline points=%228 12 11 15 16 9%22/></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=1" />
+<link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
 
 <!-- Écran de verrouillage léger -->
 <div id="lock-screen" class="lock-screen hidden">
   <form id="lock-form" class="lock-box">
-    <div class="lock-icon">🔒</div>
+    <div class="lock-icon" data-icon="lock"></div>
     <h1>Tableau de bord</h1>
     <p class="muted">Entre le mot de passe pour continuer.</p>
     <input type="password" id="lock-input" placeholder="Mot de passe" autocomplete="current-password" autofocus />
@@ -28,7 +28,7 @@
 
   <aside class="sidebar">
     <div class="brand">
-      <span class="brand-icon">✅</span>
+      <span class="brand-icon" data-icon="logo"></span>
       <span class="brand-text">Tableau de bord</span>
     </div>
 
@@ -40,7 +40,7 @@
     </div>
 
     <div class="projects-block">
-      <h2>💡 Idées par projet</h2>
+      <h2><span class="icon" data-icon="lightbulb" style="width:12px;height:12px;margin-right:5px;"></span>Idées par projet</h2>
       <div id="project-pills" class="project-pills"></div>
       <p id="project-pills-empty" class="attention-empty hidden">Crée une tâche avec un projet pour commencer.</p>
     </div>
@@ -49,23 +49,23 @@
   <div class="main">
     <header class="topbar">
       <div class="topbar-search">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon" data-icon="search"></span>
         <input type="search" id="search-input" class="search-input" placeholder="Rechercher une tâche…" />
       </div>
       <select id="project-filter" class="select"><option value="">Tous les projets</option></select>
       <select id="assignee-filter" class="select"><option value="">Tous les membres</option></select>
       <div class="urgency-filters" id="urgency-filters">
-        <button class="chip chip-urgent" data-urgency="urgent">🔴 Urgent</button>
-        <button class="chip chip-moyen" data-urgency="moyen">🟡 Moyen</button>
-        <button class="chip chip-faible" data-urgency="faible">🟢 Faible</button>
+        <button class="chip" data-urgency="urgent"><span class="dot dot-urgent"></span>Urgent</button>
+        <button class="chip" data-urgency="moyen"><span class="dot dot-moyen"></span>Moyen</button>
+        <button class="chip" data-urgency="faible"><span class="dot dot-faible"></span>Faible</button>
       </div>
       <div class="topbar-spacer"></div>
       <span id="sync-status" class="sync-status"></span>
-      <button id="discord-now-btn" class="btn btn-discord" title="Envoyer le résumé Discord tout de suite">📨 Envoyer sur Discord</button>
-      <button id="new-task-btn" class="btn btn-primary">+ Nouvelle tâche</button>
-      <button id="stats-btn" class="btn btn-icon" title="Statistiques de l'équipe">📊</button>
+      <button id="discord-now-btn" class="btn btn-discord" title="Envoyer le résumé Discord tout de suite"><span class="icon" data-icon="send"></span>Envoyer sur Discord</button>
+      <button id="new-task-btn" class="btn btn-primary"><span class="icon" data-icon="plus"></span>Nouvelle tâche</button>
+      <button id="stats-btn" class="btn btn-icon" title="Statistiques de l'équipe" data-icon="bar-chart"></button>
       <div class="notif-wrapper">
-        <button id="notif-btn" class="btn btn-icon" title="Notifications">🔔<span id="notif-badge" class="notif-badge hidden">0</span></button>
+        <button id="notif-btn" class="btn btn-icon" title="Notifications"><span data-icon="bell"></span><span id="notif-badge" class="notif-badge hidden">0</span></button>
         <div id="notif-panel" class="notif-panel hidden">
           <div class="notif-panel-header">
             <span>Boîte de réception</span>
@@ -74,8 +74,8 @@
           <div id="notif-list" class="notif-list"></div>
         </div>
       </div>
-      <button id="team-btn" class="btn btn-icon" title="Équipe">👥</button>
-      <button id="settings-btn" class="btn btn-icon" title="Paramètres">⚙️</button>
+      <button id="team-btn" class="btn btn-icon" title="Équipe" data-icon="users"></button>
+      <button id="settings-btn" class="btn btn-icon" title="Paramètres" data-icon="settings"></button>
     </header>
 
     <main class="board" id="board">
@@ -99,15 +99,15 @@
 <!-- Page idées (routée en #/idea/<projet>) -->
 <div id="idea-page" class="page-overlay hidden">
   <header class="page-header">
-    <button type="button" id="idea-page-back" class="page-back-btn">← Retour</button>
-    <span class="page-title" id="idea-page-title">💡 Idées</span>
+    <button type="button" id="idea-page-back" class="page-back-btn"><span class="icon" data-icon="arrow-left"></span>Retour</button>
+    <span class="page-title"><span class="icon" data-icon="lightbulb"></span><span id="idea-page-title">Idées</span></span>
   </header>
   <div class="page-body">
     <form id="idea-form" class="idea-toolbar">
       <div class="idea-composer">
         <textarea id="idea-input" rows="2" placeholder="Note une idée et appuie sur Entrée…"></textarea>
         <div class="dropzone dropzone-compact" id="idea-dropzone">
-          <span class="dropzone-icon">🖼️</span>
+          <span class="dropzone-icon" data-icon="image"></span>
           <span>Glisse une image ici, ou clique</span>
           <input type="file" id="idea-image-input" accept="image/*" multiple hidden />
         </div>
@@ -122,8 +122,8 @@
 <!-- Page statistiques (routée en #/stats) -->
 <div id="stats-page" class="page-overlay hidden">
   <header class="page-header">
-    <button type="button" id="stats-page-back" class="page-back-btn">← Retour</button>
-    <span class="page-title">📊 Statistiques de l'équipe</span>
+    <button type="button" id="stats-page-back" class="page-back-btn"><span class="icon" data-icon="arrow-left"></span>Retour</button>
+    <span class="page-title"><span class="icon" data-icon="bar-chart"></span>Statistiques de l'équipe</span>
   </header>
   <div class="page-body">
     <p id="stats-unassigned" class="hint"></p>
@@ -136,7 +136,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h2 id="task-modal-title">Nouvelle tâche</h2>
-      <button class="btn-close" id="task-modal-close">✕</button>
+      <button class="btn-close" id="task-modal-close" data-icon="x"></button>
     </div>
 
     <!-- Vue lecture seule -->
@@ -148,7 +148,7 @@
       <div id="task-view-screenshots" class="task-view-screenshots"></div>
 
       <div class="task-comments">
-        <h4>💬 Commentaires</h4>
+        <h4><span class="icon" data-icon="message-circle"></span>Commentaires</h4>
         <div id="task-comments-list" class="task-comments-list"></div>
         <form id="comment-form" class="comment-form">
           <select id="comment-author">
@@ -160,9 +160,9 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" id="task-view-delete-btn" class="btn btn-danger">Supprimer</button>
+        <button type="button" id="task-view-delete-btn" class="btn btn-danger"><span class="icon" data-icon="trash"></span>Supprimer</button>
         <div class="modal-footer-right">
-          <button type="button" id="task-view-edit-btn" class="btn btn-primary">✏️ Modifier</button>
+          <button type="button" id="task-view-edit-btn" class="btn btn-primary"><span class="icon" data-icon="edit"></span>Modifier</button>
         </div>
       </div>
     </div>
@@ -184,9 +184,9 @@
         </label>
         <label>Urgence
           <select id="task-urgency">
-            <option value="urgent">🔴 Urgent</option>
-            <option value="moyen" selected>🟡 Moyen</option>
-            <option value="faible">🟢 Faible</option>
+            <option value="urgent" data-color="urgent">Urgent</option>
+            <option value="moyen" data-color="moyen" selected>Moyen</option>
+            <option value="faible" data-color="faible">Faible</option>
           </select>
         </label>
         <label>Assigné à
@@ -210,9 +210,9 @@
       <div class="form-row">
         <label>Statut
           <select id="task-status">
-            <option value="todo">À faire</option>
-            <option value="doing">En cours</option>
-            <option value="done">Terminé</option>
+            <option value="todo" data-color="gray">À faire</option>
+            <option value="doing" data-color="blue">En cours</option>
+            <option value="done" data-color="green">Terminé</option>
           </select>
         </label>
         <label>Échéance
@@ -226,7 +226,7 @@
 
       <label>Captures d'écran</label>
       <div class="dropzone" id="screenshot-dropzone">
-        <span class="dropzone-icon">🖼️</span>
+        <span class="dropzone-icon" data-icon="image"></span>
         <span>Glisse une image ici, ou clique pour choisir</span>
         <input type="file" id="task-screenshots-input" accept="image/*" multiple hidden />
       </div>
@@ -234,7 +234,7 @@
       <div id="task-screenshots-list" class="screenshots-list"></div>
 
       <div class="modal-footer">
-        <button type="button" id="task-delete-btn" class="btn btn-danger hidden">Supprimer</button>
+        <button type="button" id="task-delete-btn" class="btn btn-danger hidden"><span class="icon" data-icon="trash"></span>Supprimer</button>
         <div class="modal-footer-right">
           <button type="button" id="task-cancel-btn" class="btn">Annuler</button>
           <button type="submit" class="btn btn-primary" id="task-save-btn">Enregistrer</button>
@@ -249,8 +249,8 @@
 <div id="team-modal" class="modal-overlay hidden">
   <div class="modal modal-wide">
     <div class="modal-header">
-      <h2>👥 Équipe</h2>
-      <button class="btn-close" id="team-modal-close">✕</button>
+      <h2><span class="icon" data-icon="users" style="margin-right:8px;"></span>Équipe</h2>
+      <button class="btn-close" id="team-modal-close" data-icon="x"></button>
     </div>
     <div class="modal-body">
       <form id="member-form" class="member-form">
@@ -288,7 +288,7 @@
   <div class="modal modal-small">
     <div class="modal-header">
       <h2>Paramètres</h2>
-      <button class="btn-close" id="settings-modal-close">✕</button>
+      <button class="btn-close" id="settings-modal-close" data-icon="x"></button>
     </div>
     <form id="settings-form" class="modal-body">
       <label>Propriétaire GitHub (ton nom d'utilisateur)
@@ -311,6 +311,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=1"></script>
+<script type="module" src="js/app.js?v=2"></script>
 </body>
 </html>

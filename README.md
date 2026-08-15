@@ -75,13 +75,16 @@ C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date
 - **Commentaires** : en bas de chaque fiche tâche, on peut laisser un commentaire (ex: "je n'ai pas le fichier") en choisissant qui écrit. Ça crée une notification
 - **🔔 Boîte de réception** : le bouton cloche en haut affiche les commentaires non lus, avec un badge de compteur — clique dessus pour ouvrir la tâche concernée
 - **📊 Statistiques** : page dédiée (bouton 📊) montrant, par membre de l'équipe, le nombre de tâches assignées, terminées, en cours, à faire, et le taux de complétion
+- **Design** : interface façon panneaux flottants (fond translucide/flouté, coins arrondis, boutons pilule), avec de vraies icônes plutôt que des emojis
+- **Uploads plus fiables** : les images sont automatiquement redimensionnées/compressées dans le navigateur avant l'envoi (plus rapide, moins d'erreurs), envoyées en parallèle, avec une nouvelle tentative automatique en cas d'échec ponctuel
 
 ## Structure du projet
 ```
 index.html              Page principale
 css/style.css           Design
 js/app.js                Logique du tableau (rendu, glisser-déposer, modales)
-js/github.js             Appels à l'API GitHub (lecture/écriture des données)
+js/github.js             Appels à l'API GitHub (lecture/écriture des données, upload/compression d'images)
+js/icons.js               Jeu d'icônes SVG utilisé dans toute l'interface
 js/config.js              Paramètres locaux + mot de passe du verrou léger
 data/tasks.json           Toutes les tâches (la "base de données")
 data/images/               Captures d'écran uploadées

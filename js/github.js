@@ -61,6 +61,52 @@ export async function putImageFile(owner, repo, path, token, base64Content, mess
   return `https://raw.githubusercontent.com/${owner}/${repo}/${BRANCH}/${path}`;
 }
 
+// Retente une fois en cas d'échec transitoire (réseau, 5xx) avant d'abandonner.
+export async function putImageFileWithRetry(owner, repo, path, token, base64Content, message) {
+  try {
+    return await putImageFile(owner, repo, path, token, base64Content, message);
+  } catch (e) {
+    await new Promise((r) => setTimeout(r, 900));
+    return await putImageFile(owner, repo, path, token, base64Content, message);
+  }
+}
+
+// Redimensionne/compresse une image côté navigateur avant envoi, pour des
+// uploads plus rapides et plus fiables (payload plus léger = moins de
+// timeouts/erreurs). Ne touche pas aux images déjà petites.
+export function prepareImageForUpload(file, { maxDim = 1600, quality = 0.85, maxBytes = 1.5 * 1024 * 1024 } = {}) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const needsResize = img.width > maxDim || img.height > maxDim;
+      const needsCompress = file.size > maxBytes;
+      if (!needsResize && !needsCompress) {
+        resolve(file);
+        return;
+      }
+      let { width, height } = img;
+      if (needsResize) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Compression impossible'))),
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error("Impossible de lire l'image"));
+    img.src = url;
+  });
+}
+
 export async function dispatchWorkflow(owner, repo, token, workflowFile) {
   const url = `${API}/repos/${owner}/${repo}/actions/workflows/${workflowFile}/dispatches`;
   const res = await fetch(url, {

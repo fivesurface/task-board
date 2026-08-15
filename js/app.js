@@ -1,5 +1,6 @@
 import { config, SITE_PASSPHRASE, isUnlocked, unlock } from './config.js';
-import { getJsonFile, putJsonFile, putImageFile, fileToBase64, dispatchWorkflow } from './github.js';
+import { getJsonFile, putJsonFile, putImageFileWithRetry, prepareImageForUpload, fileToBase64, dispatchWorkflow } from './github.js';
+import { icon, applyStaticIcons } from './icons.js';
 
 const TASKS_PATH = 'data/tasks.json';
 const IDEAS_PATH = 'data/ideas.json';
@@ -8,6 +9,11 @@ const NOTIFICATIONS_PATH = 'data/notifications.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
 const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
 const STATUS_LABEL = { todo: 'À faire', doing: 'En cours', done: 'Terminé' };
+const URGENCY_TEXT = { urgent: 'Urgent', moyen: 'Moyen', faible: 'Faible' };
+
+function urgencyBadge(urgency) {
+  return `<span class="dot dot-${urgency}"></span>${URGENCY_TEXT[urgency] || urgency}`;
+}
 
 const state = {
   tasks: [],
@@ -29,7 +35,6 @@ const state = {
 
 const $ = (sel) => document.querySelector(sel);
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const urgencyLabel = { urgent: '🔴 Urgent', moyen: '🟡 Moyen', faible: '🟢 Faible' };
 const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 
 // ---------------------------------------------------------------------
@@ -138,6 +143,8 @@ async function loadMembers() {
     state.membersSha = sha;
     renderMemberList();
     populateAssigneeSelects();
+    renderAssigneeFilter();
+    renderBoard();
     refreshOpenPage();
   } catch (e) {
     console.error("Impossible de charger l'équipe :", e);
@@ -264,13 +271,13 @@ function computeEscalation(task) {
   const today = todayStr();
   if (task.dueDate) {
     const overdueDays = daysBetween(task.dueDate, today);
-    if (overdueDays >= 3) return { text: `🔥 En retard depuis ${overdueDays} j`, cls: 'critical' };
-    if (overdueDays >= 1) return { text: `⚠️ En retard depuis ${overdueDays} j`, cls: 'warning' };
+    if (overdueDays >= 3) return { text: `${icon('flame')} En retard depuis ${overdueDays} j`, cls: 'critical' };
+    if (overdueDays >= 1) return { text: `${icon('alert-triangle')} En retard depuis ${overdueDays} j`, cls: 'warning' };
     return null;
   }
   if (task.createdAt) {
     const openDays = Math.floor((Date.now() - new Date(task.createdAt).getTime()) / 86400000);
-    if (openDays >= 5) return { text: `⏳ En attente depuis ${openDays} j`, cls: 'stale' };
+    if (openDays >= 5) return { text: `${icon('clock')} En attente depuis ${openDays} j`, cls: 'stale' };
   }
   return null;
 }
@@ -287,10 +294,10 @@ function renderCard(task) {
   const shots = task.screenshots || [];
   const assignee = task.assigneeId ? state.members.find((m) => m.id === task.assigneeId) : null;
   card.innerHTML = `
-    <div class="task-card-title">${escapeHtml(task.title)}</div>
+    <div class="task-card-title"><span class="dot dot-${task.urgency}"></span>${escapeHtml(task.title)}</div>
     <div class="task-card-meta">
       ${task.project ? `<button type="button" class="task-project-chip" data-project="${escapeHtml(task.project)}">${escapeHtml(task.project)}</button>` : ''}
-      ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : '📅 '}${task.dueDate}</span>` : ''}
+      ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? icon('alert-triangle') : icon('calendar')}${task.dueDate}</span>` : ''}
       ${assignee ? `<span class="assignee-chip"><span class="assignee-chip-avatar">${escapeHtml(assignee.name[0] || '?').toUpperCase()}</span>${escapeHtml(assignee.name)}</span>` : ''}
     </div>
     ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}</div>` : ''}
@@ -327,17 +334,17 @@ function renderSidebar() {
       <div class="stat-tile-label">tâche(s) restante(s)</div>
     </div>
     <div class="stat-tile small urgent">
-      <div class="stat-tile-icon">🔴</div>
+      <div class="stat-tile-icon">${icon('alert-triangle')}</div>
       <div class="stat-tile-value">${byUrgency.urgent || 0}</div>
       <div class="stat-tile-label">Urgent</div>
     </div>
     <div class="stat-tile small moyen">
-      <div class="stat-tile-icon">🟡</div>
+      <div class="stat-tile-icon">${icon('clock')}</div>
       <div class="stat-tile-value">${byUrgency.moyen || 0}</div>
       <div class="stat-tile-label">Moyen</div>
     </div>
     <div class="stat-tile small faible" style="grid-column: span 2;">
-      <div class="stat-tile-icon">🟢</div>
+      <div class="stat-tile-icon">${icon('check')}</div>
       <div class="stat-tile-value">${byUrgency.faible || 0}</div>
       <div class="stat-tile-label">Faible</div>
     </div>
@@ -355,15 +362,15 @@ function renderSidebar() {
 
   const list = $('#attention-list');
   if (attention.length === 0) {
-    list.innerHTML = '<p class="attention-empty">Rien à faire pour l\'instant 🎉</p>';
+    list.innerHTML = `<p class="attention-empty">${icon('check')} Rien à faire pour l'instant</p>`;
   } else {
     list.innerHTML = attention.map((t) => {
       const overdue = t.dueDate && t.dueDate < today;
       const escalation = computeEscalation(t);
       return `
-        <div class="attention-item ${t.urgency} ${overdue ? 'overdue' : ''}" data-id="${t.id}">
-          <div class="attention-item-title">${escapeHtml(t.title)}</div>
-          <span class="muted">${t.dueDate ? (overdue ? '⚠️ ' + t.dueDate : t.dueDate) : urgencyLabel[t.urgency]}${t.project ? ' · ' + escapeHtml(t.project) : ''}</span>
+        <div class="attention-item ${overdue ? 'overdue' : ''}" data-id="${t.id}">
+          <div class="attention-item-title"><span class="dot dot-${t.urgency}"></span>${escapeHtml(t.title)}</div>
+          <span class="muted">${t.dueDate ? (overdue ? icon('alert-triangle') + ' ' + t.dueDate : t.dueDate) : URGENCY_TEXT[t.urgency]}${t.project ? ' · ' + escapeHtml(t.project) : ''}</span>
           ${escalation ? `<div class="escalation ${escalation.cls}">${escalation.text}</div>` : ''}
         </div>
       `;
@@ -394,7 +401,7 @@ function renderProjectPills() {
     const count = state.ideas.filter((i) => i.project === p).length;
     return `
       <button type="button" class="project-pill" data-project="${escapeHtml(p)}">
-        <span class="project-pill-icon">💡</span>
+        <span class="project-pill-icon">${icon('lightbulb')}</span>
         <span>${escapeHtml(p)}</span>
         ${count ? `<span class="project-pill-count">${count}</span>` : ''}
       </button>
@@ -443,7 +450,7 @@ function showIdeaPage(project) {
   hideAllPages();
   state.currentIdeaProject = project;
   state.editingIdeaImages = [];
-  $('#idea-page-title').textContent = `💡 Idées — ${project}`;
+  $('#idea-page-title').textContent = `Idées — ${project}`;
   $('#idea-input').value = '';
   renderIdeaComposerImages();
   renderIdeaGrid();
@@ -473,7 +480,7 @@ function renderIdeaGrid() {
       ${idea.images?.length ? `<div class="idea-card-images">${idea.images.map((u) => `<a class="idea-card-img-link" href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" /></a>`).join('')}</div>` : ''}
       <div class="idea-card-footer">
         <span class="idea-card-date">${new Date(idea.createdAt).toLocaleDateString('fr-FR')}</span>
-        <button type="button" class="idea-card-delete" data-id="${idea.id}">✕ Supprimer</button>
+        <button type="button" class="idea-card-delete" data-id="${idea.id}">${icon('trash')} Supprimer</button>
       </div>
     </div>
   `).join('');
@@ -488,7 +495,7 @@ function renderIdeaComposerImages() {
   el.innerHTML = state.editingIdeaImages.map((url, i) => `
     <div class="screenshot-thumb">
       <img src="${url}" loading="lazy" />
-      <button type="button" class="screenshot-remove" data-idx="${i}">✕</button>
+      <button type="button" class="screenshot-remove" data-idx="${i}">${icon('x')}</button>
     </div>
   `).join('');
   el.querySelectorAll('.screenshot-remove').forEach((btn) => {
@@ -500,22 +507,43 @@ function renderIdeaComposerImages() {
 }
 
 async function handleIdeaImageUpload(files) {
+  await uploadImages(files, 'idea-' + Date.now(), state.editingIdeaImages, renderIdeaComposerImages, $('#idea-dropzone'));
+}
+
+// ---------------------------------------------------------------------
+// Upload d'images : compression côté navigateur, envoi en parallèle,
+// et une retentative automatique par fichier en cas d'échec transitoire.
+// ---------------------------------------------------------------------
+async function uploadImages(files, idPrefix, targetArray, rerender, dropzoneEl) {
   if (!files.length) return;
-  setSyncStatus('Envoi image…', 'saving');
-  const tempId = 'idea-' + Date.now();
-  try {
-    for (const file of files) {
-      const base64 = await fileToBase64(file);
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `data/images/${tempId}-${Date.now()}-${safeName}`;
-      const url = await putImageFile(config.owner, config.repo, path, config.token, base64, 'Ajouter une image à une idée');
-      state.editingIdeaImages.push(url);
+  dropzoneEl?.classList.add('uploading');
+  setSyncStatus(`Envoi de ${files.length} image(s)…`, 'saving');
+
+  let ok = 0;
+  let failed = 0;
+  await Promise.all(files.map(async (file) => {
+    try {
+      const prepared = await prepareImageForUpload(file);
+      const base64 = await fileToBase64(prepared);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\w+$/, '.jpg');
+      const path = `data/images/${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safeName}`;
+      const url = await putImageFileWithRetry(config.owner, config.repo, path, config.token, base64, `Ajouter une image (${idPrefix})`);
+      targetArray.push(url);
+      ok++;
+    } catch (e) {
+      console.error(e);
+      failed++;
     }
-    renderIdeaComposerImages();
-    setSyncStatus('Image envoyée ✓');
-  } catch (e) {
-    setSyncStatus('Erreur upload', 'error');
-    alert("Échec de l'envoi de l'image :\n" + e.message);
+  }));
+
+  dropzoneEl?.classList.remove('uploading');
+  rerender();
+
+  if (failed === 0) {
+    setSyncStatus(`${ok} image(s) envoyée(s) ✓`);
+  } else {
+    setSyncStatus(`${ok} envoyée(s), ${failed} échouée(s)`, 'error');
+    alert(`${failed} image(s) n'ont pas pu être envoyées. Vérifie ta connexion et réessaie.`);
   }
 }
 
@@ -560,7 +588,7 @@ function renderStatsPage() {
 
   const grid = $('#stats-grid');
   if (state.members.length === 0) {
-    grid.innerHTML = '<p class="member-empty">Ajoute des membres dans "👥 Équipe" pour voir leurs statistiques.</p>';
+    grid.innerHTML = '<p class="member-empty">Ajoute des membres via le bouton Équipe pour voir leurs statistiques.</p>';
     return;
   }
   grid.innerHTML = state.members.map((m) => {
@@ -580,9 +608,9 @@ function renderStatsPage() {
           </div>
         </div>
         <div class="stats-row"><span>Total assigné</span><span>${total}</span></div>
-        <div class="stats-row"><span>✅ Terminées</span><span>${done}</span></div>
-        <div class="stats-row"><span>🔧 En cours</span><span>${doing}</span></div>
-        <div class="stats-row"><span>📋 À faire</span><span>${todo}</span></div>
+        <div class="stats-row"><span><span class="dot dot-green"></span> Terminées</span><span>${done}</span></div>
+        <div class="stats-row"><span><span class="dot dot-blue"></span> En cours</span><span>${doing}</span></div>
+        <div class="stats-row"><span><span class="dot dot-gray"></span> À faire</span><span>${todo}</span></div>
         <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${rate}%"></div></div>
         <div class="stats-rate">${rate}% terminé</div>
       </div>
@@ -604,7 +632,7 @@ function enhanceSelect(selectEl, extraClass) {
   wrapper.innerHTML = `
     <button type="button" class="custom-select-trigger">
       <span class="custom-select-label"></span>
-      <span class="custom-select-arrow">▾</span>
+      <span class="custom-select-arrow">${icon('chevron-down')}</span>
     </button>
     <div class="custom-select-menu hidden"></div>
   `;
@@ -617,7 +645,7 @@ function enhanceSelect(selectEl, extraClass) {
   function build() {
     label.textContent = selectEl.options[selectEl.selectedIndex]?.textContent || '';
     menu.innerHTML = [...selectEl.options].map((o) => `
-      <div class="custom-select-option ${o.value === selectEl.value ? 'active' : ''}" data-value="${escapeHtml(o.value)}">${escapeHtml(o.textContent)}</div>
+      <div class="custom-select-option ${o.value === selectEl.value ? 'active' : ''}" data-value="${escapeHtml(o.value)}">${o.dataset.color ? `<span class="dot dot-${o.dataset.color}"></span>` : ''}${escapeHtml(o.textContent)}</div>
     `).join('');
   }
   build();
@@ -712,7 +740,7 @@ function bindDragAndDrop() {
 function renderTagChips() {
   const el = $('#tag-chips');
   el.innerHTML = state.editingLabels.map((label, i) => `
-    <span class="tag-chip">${escapeHtml(label)}<button type="button" data-idx="${i}">✕</button></span>
+    <span class="tag-chip">${escapeHtml(label)}<button type="button" data-idx="${i}">${icon('x')}</button></span>
   `).join('');
   el.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -771,14 +799,14 @@ function renderMemberList() {
           <div class="member-row-name">
             ${escapeHtml(m.name)}
             ${m.badge ? `<span class="badge-pill">${escapeHtml(m.badge)}</span>` : ''}
-            ${m.alwaysNotify ? `<span class="badge-pill badge-chief">🔔 Toujours notifié</span>` : ''}
+            ${m.alwaysNotify ? `<span class="badge-pill badge-chief">${icon('bell')} Toujours notifié</span>` : ''}
           </div>
           <div class="member-row-discord muted">${m.discordId ? 'ID Discord : ' + escapeHtml(m.discordId) : 'Pas d\'ID Discord renseigné'}</div>
         </div>
       </div>
       <div class="member-row-actions">
-        <button type="button" class="btn btn-icon member-edit-btn" data-id="${m.id}">✏️</button>
-        <button type="button" class="btn btn-icon member-delete-btn" data-id="${m.id}">🗑️</button>
+        <button type="button" class="btn btn-icon member-edit-btn" data-id="${m.id}">${icon('edit')}</button>
+        <button type="button" class="btn btn-icon member-delete-btn" data-id="${m.id}">${icon('trash')}</button>
       </div>
     </div>
   `).join('');
@@ -890,10 +918,10 @@ function showTaskView(task) {
   const escalation = computeEscalation(task);
 
   $('#task-view-badges').innerHTML = `
-    <span class="badge-pill" style="background:var(--${task.urgency}-bg); color:var(--${task.urgency});">${urgencyLabel[task.urgency] || task.urgency}</span>
+    <span class="badge-pill" style="background:var(--${task.urgency}-bg); color:var(--${task.urgency});">${urgencyBadge(task.urgency)}</span>
     <span class="badge-pill">${STATUS_LABEL[task.status] || task.status}</span>
     ${task.project ? `<span class="badge-pill">${escapeHtml(task.project)}</span>` : ''}
-    ${assignee ? `<span class="badge-pill">👤 ${escapeHtml(assignee.name)}</span>` : ''}
+    ${assignee ? `<span class="badge-pill">${icon('user')} ${escapeHtml(assignee.name)}</span>` : ''}
     ${(task.labels || []).map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}
     ${escalation ? `<span class="escalation ${escalation.cls}">${escalation.text}</span>` : ''}
   `;
@@ -902,9 +930,9 @@ function showTaskView(task) {
   $('#task-view-description').classList.toggle('muted', !task.description);
 
   $('#task-view-meta').innerHTML = `
-    ${task.dueDate ? `<span><strong>Échéance</strong> · ${task.dueDate}${overdue ? ' ⚠️' : ''}</span>` : ''}
-    ${task.reminderDate ? `<span><strong>Rappel Discord</strong> · ${task.reminderDate}</span>` : ''}
-    <span><strong>Créée le</strong> · ${new Date(task.createdAt).toLocaleDateString('fr-FR')}</span>
+    ${task.dueDate ? `<span>${icon('calendar')}<strong>Échéance</strong> · ${task.dueDate}${overdue ? ' ' + icon('alert-triangle') : ''}</span>` : ''}
+    ${task.reminderDate ? `<span>${icon('send')}<strong>Rappel Discord</strong> · ${task.reminderDate}</span>` : ''}
+    <span>${icon('calendar')}<strong>Créée le</strong> · ${new Date(task.createdAt).toLocaleDateString('fr-FR')}</span>
   `;
 
   $('#task-view-screenshots').innerHTML = (task.screenshots || [])
@@ -1032,7 +1060,7 @@ function renderNotifications() {
   const sorted = state.notifications.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   list.innerHTML = sorted.map((n) => `
     <div class="notif-item ${n.read ? '' : 'unread'}" data-id="${n.id}" data-task-id="${n.taskId}">
-      <div class="notif-item-title">💬 ${escapeHtml(n.authorName)} sur « ${escapeHtml(n.taskTitle)} »</div>
+      <div class="notif-item-title">${icon('message-circle')}${escapeHtml(n.authorName)} sur « ${escapeHtml(n.taskTitle)} »</div>
       <div class="notif-item-text">${escapeHtml(n.text)}</div>
       <div class="notif-item-time">${timeAgo(n.createdAt)}</div>
     </div>
@@ -1078,7 +1106,7 @@ function renderScreenshotsList() {
   el.innerHTML = state.editingScreenshots.map((url, i) => `
     <div class="screenshot-thumb">
       <img src="${url}" loading="lazy" />
-      <button type="button" class="screenshot-remove" data-idx="${i}">✕</button>
+      <button type="button" class="screenshot-remove" data-idx="${i}">${icon('x')}</button>
     </div>
   `).join('');
   el.querySelectorAll('.screenshot-remove').forEach((btn) => {
@@ -1090,23 +1118,8 @@ function renderScreenshotsList() {
 }
 
 async function handleScreenshotUpload(files) {
-  if (!files.length) return;
-  setSyncStatus('Envoi image…', 'saving');
   const taskId = $('#task-id').value || 'new-' + Date.now();
-  try {
-    for (const file of files) {
-      const base64 = await fileToBase64(file);
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `data/images/${taskId}-${Date.now()}-${safeName}`;
-      const url = await putImageFile(config.owner, config.repo, path, config.token, base64, `Ajouter capture pour ${taskId}`);
-      state.editingScreenshots.push(url);
-    }
-    renderScreenshotsList();
-    setSyncStatus('Image envoyée ✓');
-  } catch (e) {
-    setSyncStatus('Erreur upload', 'error');
-    alert("Échec de l'envoi de l'image :\n" + e.message);
-  }
+  await uploadImages(files, taskId, state.editingScreenshots, renderScreenshotsList, $('#screenshot-dropzone'));
 }
 
 async function handleTaskSubmit(e) {
@@ -1325,4 +1338,5 @@ function bindGlobalEvents() {
   });
 }
 
+applyStaticIcons();
 initLock();
