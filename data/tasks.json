@@ -39,6 +39,23 @@
       "updatedAt": "2026-08-15T14:23:18.164Z",
       "labels": [],
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274"
+    },
+    {
+      "id": "86411f2f-4dc4-45cf-b90b-62412d473a2e",
+      "title": "Finir l'intersection",
+      "project": "Cooper Hills",
+      "labels": [
+        "30 min max"
+      ],
+      "description": "refait bien la liaision entre la route et le sable",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-08-16",
+      "reminderDate": null,
+      "screenshots": [],
+      "createdAt": "2026-08-15T14:42:37.835Z",
+      "updatedAt": "2026-08-15T14:42:37.835Z"
     }
   ]
 }
