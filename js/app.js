@@ -4,8 +4,10 @@ import { getJsonFile, putJsonFile, putImageFile, fileToBase64, dispatchWorkflow 
 const TASKS_PATH = 'data/tasks.json';
 const IDEAS_PATH = 'data/ideas.json';
 const MEMBERS_PATH = 'data/members.json';
+const NOTIFICATIONS_PATH = 'data/notifications.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
 const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
+const STATUS_LABEL = { todo: 'À faire', doing: 'En cours', done: 'Terminé' };
 
 const state = {
   tasks: [],
@@ -13,9 +15,13 @@ const state = {
   ideas: [],
   ideasSha: null,
   currentIdeaProject: null,
+  editingIdeaImages: [],
   members: [],
   membersSha: null,
   editingMemberId: null,
+  notifications: [],
+  notificationsSha: null,
+  currentTaskId: null,
   filters: { search: '', project: '', urgency: null, assignee: '' },
   editingScreenshots: [],
   editingLabels: [],
@@ -59,6 +65,8 @@ function start() {
   loadTasks();
   loadIdeas();
   loadMembers();
+  loadNotifications();
+  handleRoute();
 }
 
 async function loadTasks() {
@@ -69,6 +77,7 @@ async function loadTasks() {
     state.sha = sha;
     setSyncStatus('À jour');
     render();
+    refreshOpenPage();
   } catch (e) {
     setSyncStatus('Erreur de chargement', 'error');
     console.error(e);
@@ -101,6 +110,7 @@ async function loadIdeas() {
     state.ideas = data?.ideas || [];
     state.ideasSha = sha;
     renderProjectPills();
+    refreshOpenPage();
   } catch (e) {
     console.error("Impossible de charger les idées :", e);
   }
@@ -128,6 +138,7 @@ async function loadMembers() {
     state.membersSha = sha;
     renderMemberList();
     populateAssigneeSelects();
+    refreshOpenPage();
   } catch (e) {
     console.error("Impossible de charger l'équipe :", e);
   }
@@ -146,6 +157,36 @@ async function saveMembers(commitMessage) {
     alert("Impossible d'enregistrer l'équipe sur GitHub :\n" + e.message);
     throw e;
   }
+}
+
+async function loadNotifications() {
+  try {
+    const { data, sha } = await getJsonFile(config.owner, config.repo, NOTIFICATIONS_PATH, config.token);
+    state.notifications = data?.notifications || [];
+    state.notificationsSha = sha;
+    renderNotifications();
+  } catch (e) {
+    console.error('Impossible de charger les notifications :', e);
+  }
+}
+
+async function saveNotifications(commitMessage) {
+  try {
+    const { sha: freshSha } = await getJsonFile(config.owner, config.repo, NOTIFICATIONS_PATH, config.token);
+    const result = await putJsonFile(
+      config.owner, config.repo, NOTIFICATIONS_PATH, config.token,
+      { notifications: state.notifications }, freshSha || state.notificationsSha, commitMessage
+    );
+    state.notificationsSha = result.content.sha;
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
+function refreshOpenPage() {
+  if (!$('#idea-page').classList.contains('hidden')) renderIdeaGrid();
+  if (!$('#stats-page').classList.contains('hidden')) renderStatsPage();
 }
 
 function setSyncStatus(text, kind) {
@@ -243,16 +284,17 @@ function renderCard(task) {
 
   const overdue = task.dueDate && task.dueDate < todayStr() && task.status !== 'done';
   const labels = task.labels || [];
+  const shots = task.screenshots || [];
   const assignee = task.assigneeId ? state.members.find((m) => m.id === task.assigneeId) : null;
   card.innerHTML = `
     <div class="task-card-title">${escapeHtml(task.title)}</div>
     <div class="task-card-meta">
       ${task.project ? `<button type="button" class="task-project-chip" data-project="${escapeHtml(task.project)}">${escapeHtml(task.project)}</button>` : ''}
       ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : '📅 '}${task.dueDate}</span>` : ''}
-      ${task.screenshots?.length ? `<span class="task-shots">🖼️ ${task.screenshots.length}</span>` : ''}
       ${assignee ? `<span class="assignee-chip"><span class="assignee-chip-avatar">${escapeHtml(assignee.name[0] || '?').toUpperCase()}</span>${escapeHtml(assignee.name)}</span>` : ''}
     </div>
     ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}</div>` : ''}
+    ${shots.length ? `<div class="task-card-thumbs">${shots.slice(0, 3).map((u) => `<span class="task-card-thumb"><img src="${u}" loading="lazy" /></span>`).join('')}${shots.length > 3 ? `<span class="task-card-thumb-more">+${shots.length - 3}</span>` : ''}</div>` : ''}
     ${escalation ? `<div class="escalation ${escalation.cls}">${escalation.text}</div>` : ''}
   `;
 
@@ -370,17 +412,48 @@ function colorForId(id) {
   return IDEA_COLORS[hash % IDEA_COLORS.length];
 }
 
+// ---------------------------------------------------------------------
+// Routage (pages plein écran : idées, statistiques)
+// ---------------------------------------------------------------------
 function openIdeaBoard(project) {
-  state.currentIdeaProject = project;
-  $('#idea-modal-title').textContent = `💡 Idées — ${project}`;
-  $('#idea-input').value = '';
-  renderIdeaGrid();
-  $('#idea-modal').classList.remove('hidden');
-  $('#idea-input').focus();
+  location.hash = '#/idea/' + encodeURIComponent(project);
 }
 
-function closeIdeaModal() {
-  $('#idea-modal').classList.add('hidden');
+function openStatsPage() {
+  location.hash = '#/stats';
+}
+
+function hideAllPages() {
+  $('#idea-page').classList.add('hidden');
+  $('#stats-page').classList.add('hidden');
+}
+
+function handleRoute() {
+  const hash = location.hash;
+  if (hash.startsWith('#/idea/')) {
+    showIdeaPage(decodeURIComponent(hash.slice('#/idea/'.length)));
+  } else if (hash === '#/stats') {
+    showStatsPage();
+  } else {
+    hideAllPages();
+  }
+}
+
+function showIdeaPage(project) {
+  hideAllPages();
+  state.currentIdeaProject = project;
+  state.editingIdeaImages = [];
+  $('#idea-page-title').textContent = `💡 Idées — ${project}`;
+  $('#idea-input').value = '';
+  renderIdeaComposerImages();
+  renderIdeaGrid();
+  $('#idea-page').classList.remove('hidden');
+}
+
+function showStatsPage() {
+  hideAllPages();
+  renderStatsPage();
+  $('#stats-page').classList.remove('hidden');
 }
 
 function renderIdeaGrid() {
@@ -396,7 +469,8 @@ function renderIdeaGrid() {
 
   grid.innerHTML = ideas.map((idea) => `
     <div class="idea-card" style="border-left-color:${colorForId(idea.id)}" data-id="${idea.id}">
-      <div class="idea-card-text">${escapeHtml(idea.text)}</div>
+      ${idea.text ? `<div class="idea-card-text">${escapeHtml(idea.text)}</div>` : ''}
+      ${idea.images?.length ? `<div class="idea-card-images">${idea.images.map((u) => `<a class="idea-card-img-link" href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" /></a>`).join('')}</div>` : ''}
       <div class="idea-card-footer">
         <span class="idea-card-date">${new Date(idea.createdAt).toLocaleDateString('fr-FR')}</span>
         <button type="button" class="idea-card-delete" data-id="${idea.id}">✕ Supprimer</button>
@@ -409,19 +483,58 @@ function renderIdeaGrid() {
   });
 }
 
+function renderIdeaComposerImages() {
+  const el = $('#idea-composer-images');
+  el.innerHTML = state.editingIdeaImages.map((url, i) => `
+    <div class="screenshot-thumb">
+      <img src="${url}" loading="lazy" />
+      <button type="button" class="screenshot-remove" data-idx="${i}">✕</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.screenshot-remove').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.editingIdeaImages.splice(Number(btn.dataset.idx), 1);
+      renderIdeaComposerImages();
+    });
+  });
+}
+
+async function handleIdeaImageUpload(files) {
+  if (!files.length) return;
+  setSyncStatus('Envoi image…', 'saving');
+  const tempId = 'idea-' + Date.now();
+  try {
+    for (const file of files) {
+      const base64 = await fileToBase64(file);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `data/images/${tempId}-${Date.now()}-${safeName}`;
+      const url = await putImageFile(config.owner, config.repo, path, config.token, base64, 'Ajouter une image à une idée');
+      state.editingIdeaImages.push(url);
+    }
+    renderIdeaComposerImages();
+    setSyncStatus('Image envoyée ✓');
+  } catch (e) {
+    setSyncStatus('Erreur upload', 'error');
+    alert("Échec de l'envoi de l'image :\n" + e.message);
+  }
+}
+
 async function handleIdeaSubmit(e) {
   e.preventDefault();
   const input = $('#idea-input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && state.editingIdeaImages.length === 0) return;
   const idea = {
     id: crypto.randomUUID(),
     project: state.currentIdeaProject,
     text,
+    images: [...state.editingIdeaImages],
     createdAt: new Date().toISOString(),
   };
   state.ideas.push(idea);
   input.value = '';
+  state.editingIdeaImages = [];
+  renderIdeaComposerImages();
   renderIdeaGrid();
   renderProjectPills();
   try {
@@ -434,6 +547,47 @@ async function handleIdeaDelete(id) {
   renderIdeaGrid();
   renderProjectPills();
   await saveIdeas('Supprimer une idée');
+}
+
+// ---------------------------------------------------------------------
+// Statistiques par membre de l'équipe
+// ---------------------------------------------------------------------
+function renderStatsPage() {
+  const unassignedCount = state.tasks.filter((t) => !t.assigneeId).length;
+  $('#stats-unassigned').textContent = unassignedCount > 0
+    ? `${unassignedCount} tâche(s) non assignée(s).`
+    : 'Toutes les tâches sont assignées.';
+
+  const grid = $('#stats-grid');
+  if (state.members.length === 0) {
+    grid.innerHTML = '<p class="member-empty">Ajoute des membres dans "👥 Équipe" pour voir leurs statistiques.</p>';
+    return;
+  }
+  grid.innerHTML = state.members.map((m) => {
+    const tasks = state.tasks.filter((t) => t.assigneeId === m.id);
+    const done = tasks.filter((t) => t.status === 'done').length;
+    const doing = tasks.filter((t) => t.status === 'doing').length;
+    const todo = tasks.filter((t) => t.status === 'todo').length;
+    const total = tasks.length;
+    const rate = total ? Math.round((done / total) * 100) : 0;
+    return `
+      <div class="stats-card">
+        <div class="stats-card-header">
+          <span class="member-avatar">${escapeHtml((m.name[0] || '?').toUpperCase())}</span>
+          <div>
+            <div class="stats-card-name">${escapeHtml(m.name)}</div>
+            ${m.badge ? `<div class="stats-card-badge">${escapeHtml(m.badge)}</div>` : ''}
+          </div>
+        </div>
+        <div class="stats-row"><span>Total assigné</span><span>${total}</span></div>
+        <div class="stats-row"><span>✅ Terminées</span><span>${done}</span></div>
+        <div class="stats-row"><span>🔧 En cours</span><span>${doing}</span></div>
+        <div class="stats-row"><span>📋 À faire</span><span>${todo}</span></div>
+        <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${rate}%"></div></div>
+        <div class="stats-rate">${rate}% terminé</div>
+      </div>
+    `;
+  }).join('');
 }
 
 function escapeHtml(str) {
@@ -519,6 +673,9 @@ function bindDropdownOutsideClick() {
     }
     if (!e.target.closest('.autocomplete')) {
       document.querySelectorAll('.autocomplete-menu').forEach((m) => m.classList.add('hidden'));
+    }
+    if (!e.target.closest('.notif-wrapper')) {
+      $('#notif-panel')?.classList.add('hidden');
     }
   });
 }
@@ -708,6 +865,62 @@ function populateAssigneeSelects() {
 // Modale tâche
 // ---------------------------------------------------------------------
 function openTaskModal(task) {
+  state.currentTaskId = task?.id || null;
+  $('#task-id').value = task?.id || '';
+  $('#task-modal').classList.remove('hidden');
+  if (task) {
+    showTaskView(task);
+  } else {
+    showTaskEdit(null);
+  }
+}
+
+function closeTaskModal() {
+  $('#task-modal').classList.add('hidden');
+  state.currentTaskId = null;
+}
+
+function showTaskView(task) {
+  $('#task-view').classList.remove('hidden');
+  $('#task-form').classList.add('hidden');
+  $('#task-modal-title').textContent = task.title;
+
+  const assignee = task.assigneeId ? state.members.find((m) => m.id === task.assigneeId) : null;
+  const overdue = task.dueDate && task.dueDate < todayStr() && task.status !== 'done';
+  const escalation = computeEscalation(task);
+
+  $('#task-view-badges').innerHTML = `
+    <span class="badge-pill" style="background:var(--${task.urgency}-bg); color:var(--${task.urgency});">${urgencyLabel[task.urgency] || task.urgency}</span>
+    <span class="badge-pill">${STATUS_LABEL[task.status] || task.status}</span>
+    ${task.project ? `<span class="badge-pill">${escapeHtml(task.project)}</span>` : ''}
+    ${assignee ? `<span class="badge-pill">👤 ${escapeHtml(assignee.name)}</span>` : ''}
+    ${(task.labels || []).map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}
+    ${escalation ? `<span class="escalation ${escalation.cls}">${escalation.text}</span>` : ''}
+  `;
+  $('#task-view-title').textContent = task.title;
+  $('#task-view-description').textContent = task.description || 'Aucune description.';
+  $('#task-view-description').classList.toggle('muted', !task.description);
+
+  $('#task-view-meta').innerHTML = `
+    ${task.dueDate ? `<span><strong>Échéance</strong> · ${task.dueDate}${overdue ? ' ⚠️' : ''}</span>` : ''}
+    ${task.reminderDate ? `<span><strong>Rappel Discord</strong> · ${task.reminderDate}</span>` : ''}
+    <span><strong>Créée le</strong> · ${new Date(task.createdAt).toLocaleDateString('fr-FR')}</span>
+  `;
+
+  $('#task-view-screenshots').innerHTML = (task.screenshots || [])
+    .map((u) => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" /></a>`)
+    .join('');
+
+  renderComments(task);
+  populateCommentAuthorSelect(task);
+
+  $('#task-view-delete-btn').onclick = () => handleTaskDelete();
+  $('#task-view-edit-btn').onclick = () => showTaskEdit(task);
+}
+
+function showTaskEdit(task) {
+  $('#task-view').classList.add('hidden');
+  $('#task-form').classList.remove('hidden');
   const isNew = !task;
   $('#task-modal-title').textContent = isNew ? 'Nouvelle tâche' : 'Modifier la tâche';
   $('#task-id').value = task?.id || '';
@@ -731,12 +944,133 @@ function openTaskModal(task) {
   state.editingLabels = task?.labels ? [...task.labels] : [];
   renderScreenshotsList();
   renderTagChips();
-  $('#task-modal').classList.remove('hidden');
   $('#task-title').focus();
 }
 
-function closeTaskModal() {
-  $('#task-modal').classList.add('hidden');
+// ---------------------------------------------------------------------
+// Commentaires
+// ---------------------------------------------------------------------
+function renderComments(task) {
+  const list = $('#task-comments-list');
+  const comments = task.comments || [];
+  if (comments.length === 0) {
+    list.innerHTML = '<p class="comment-empty">Aucun commentaire pour l\'instant.</p>';
+    return;
+  }
+  list.innerHTML = comments
+    .slice()
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+    .map((c) => {
+      const author = c.authorMemberId ? state.members.find((m) => m.id === c.authorMemberId) : null;
+      return `
+        <div class="comment-item">
+          <div class="comment-item-header">
+            <span class="comment-item-author">${escapeHtml(author?.name || "Quelqu'un")}</span>
+            <span class="comment-item-time">${new Date(c.createdAt).toLocaleString('fr-FR')}</span>
+          </div>
+          <div class="comment-item-text">${escapeHtml(c.text)}</div>
+        </div>
+      `;
+    }).join('');
+}
+
+function populateCommentAuthorSelect(task) {
+  const select = $('#comment-author');
+  select.innerHTML = '<option value="">Écrire en tant que…</option>' +
+    state.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
+  select.value = task.assigneeId || '';
+}
+
+async function handleCommentSubmit(e) {
+  e.preventDefault();
+  const task = state.tasks.find((t) => t.id === state.currentTaskId);
+  if (!task) return;
+  const text = $('#comment-text').value.trim();
+  if (!text) return;
+  const authorMemberId = $('#comment-author').value || null;
+  const comment = { id: crypto.randomUUID(), authorMemberId, text, createdAt: new Date().toISOString() };
+  task.comments = task.comments || [];
+  task.comments.push(comment);
+  task.updatedAt = comment.createdAt;
+  $('#comment-text').value = '';
+  renderComments(task);
+  render();
+
+  const author = authorMemberId ? state.members.find((m) => m.id === authorMemberId) : null;
+  state.notifications.unshift({
+    id: crypto.randomUUID(),
+    taskId: task.id,
+    taskTitle: task.title,
+    authorMemberId,
+    authorName: author?.name || "Quelqu'un",
+    text,
+    createdAt: comment.createdAt,
+    read: false,
+  });
+  renderNotifications();
+
+  try {
+    await saveTasks(`Commentaire sur "${task.title}"`);
+    await saveNotifications(`Notification : commentaire sur "${task.title}"`);
+  } catch { /* déjà notifié dans saveTasks/saveNotifications */ }
+}
+
+// ---------------------------------------------------------------------
+// Notifications (boîte de réception du chef)
+// ---------------------------------------------------------------------
+function renderNotifications() {
+  const unread = state.notifications.filter((n) => !n.read).length;
+  const badge = $('#notif-badge');
+  badge.textContent = unread;
+  badge.classList.toggle('hidden', unread === 0);
+
+  const list = $('#notif-list');
+  if (state.notifications.length === 0) {
+    list.innerHTML = '<p class="notif-empty">Aucune notification pour l\'instant.</p>';
+    return;
+  }
+  const sorted = state.notifications.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  list.innerHTML = sorted.map((n) => `
+    <div class="notif-item ${n.read ? '' : 'unread'}" data-id="${n.id}" data-task-id="${n.taskId}">
+      <div class="notif-item-title">💬 ${escapeHtml(n.authorName)} sur « ${escapeHtml(n.taskTitle)} »</div>
+      <div class="notif-item-text">${escapeHtml(n.text)}</div>
+      <div class="notif-item-time">${timeAgo(n.createdAt)}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.notif-item').forEach((item) => {
+    item.addEventListener('click', () => handleNotificationClick(item.dataset.id, item.dataset.taskId));
+  });
+}
+
+function timeAgo(iso) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "à l'instant";
+  if (mins < 60) return `il y a ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  return `il y a ${Math.floor(hours / 24)} j`;
+}
+
+async function handleNotificationClick(id, taskId) {
+  const notif = state.notifications.find((n) => n.id === id);
+  if (notif && !notif.read) {
+    notif.read = true;
+    renderNotifications();
+    try { await saveNotifications('Marquer une notification comme lue'); } catch { /* ignore */ }
+  }
+  $('#notif-panel').classList.add('hidden');
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (task) openTaskModal(task);
+}
+
+async function handleMarkAllRead() {
+  let changed = false;
+  for (const n of state.notifications) { if (!n.read) { n.read = true; changed = true; } }
+  renderNotifications();
+  if (changed) {
+    try { await saveNotifications('Tout marquer comme lu'); } catch { /* ignore */ }
+  }
 }
 
 function renderScreenshotsList() {
@@ -872,6 +1206,7 @@ function handleSettingsSubmit(e) {
   loadTasks();
   loadIdeas();
   loadMembers();
+  loadNotifications();
 }
 
 // ---------------------------------------------------------------------
@@ -889,9 +1224,14 @@ function bindGlobalEvents() {
 
   $('#new-task-btn').addEventListener('click', () => openTaskModal(null));
   $('#task-modal-close').addEventListener('click', closeTaskModal);
-  $('#task-cancel-btn').addEventListener('click', closeTaskModal);
+  $('#task-cancel-btn').addEventListener('click', () => {
+    const task = state.tasks.find((t) => t.id === state.currentTaskId);
+    if (task) return showTaskView(task);
+    closeTaskModal();
+  });
   $('#task-form').addEventListener('submit', handleTaskSubmit);
   $('#task-delete-btn').addEventListener('click', handleTaskDelete);
+  $('#comment-form').addEventListener('submit', handleCommentSubmit);
   $('#task-screenshots-input').addEventListener('change', (e) => handleScreenshotUpload([...e.target.files]));
 
   const dropzone = $('#screenshot-dropzone');
@@ -915,7 +1255,7 @@ function bindGlobalEvents() {
 
   $('#discord-now-btn').addEventListener('click', handleDiscordNow);
 
-  $('#idea-modal-close').addEventListener('click', closeIdeaModal);
+  $('#idea-page-back').addEventListener('click', () => { location.hash = ''; });
   $('#idea-form').addEventListener('submit', handleIdeaSubmit);
   $('#idea-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -923,6 +1263,26 @@ function bindGlobalEvents() {
       handleIdeaSubmit(e);
     }
   });
+  $('#idea-image-input').addEventListener('change', (e) => handleIdeaImageUpload([...e.target.files]));
+  const ideaDropzone = $('#idea-dropzone');
+  ideaDropzone.addEventListener('click', () => $('#idea-image-input').click());
+  ideaDropzone.addEventListener('dragover', (e) => { e.preventDefault(); ideaDropzone.classList.add('drag-over'); });
+  ideaDropzone.addEventListener('dragleave', () => ideaDropzone.classList.remove('drag-over'));
+  ideaDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    ideaDropzone.classList.remove('drag-over');
+    handleIdeaImageUpload([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')));
+  });
+
+  $('#stats-btn').addEventListener('click', openStatsPage);
+  $('#stats-page-back').addEventListener('click', () => { location.hash = ''; });
+  window.addEventListener('hashchange', handleRoute);
+
+  $('#notif-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('#notif-panel').classList.toggle('hidden');
+  });
+  $('#notif-mark-all-btn').addEventListener('click', handleMarkAllRead);
 
   $('#team-btn').addEventListener('click', openTeamModal);
   $('#team-modal-close').addEventListener('click', closeTeamModal);
@@ -959,7 +1319,6 @@ function bindGlobalEvents() {
       if (e.target === overlay) {
         if (overlay.id === 'task-modal') closeTaskModal();
         if (overlay.id === 'settings-modal') closeSettingsModal();
-        if (overlay.id === 'idea-modal') closeIdeaModal();
         if (overlay.id === 'team-modal') closeTeamModal();
       }
     });

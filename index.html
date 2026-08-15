@@ -63,6 +63,17 @@
       <span id="sync-status" class="sync-status"></span>
       <button id="discord-now-btn" class="btn btn-discord" title="Envoyer le résumé Discord tout de suite">📨 Envoyer sur Discord</button>
       <button id="new-task-btn" class="btn btn-primary">+ Nouvelle tâche</button>
+      <button id="stats-btn" class="btn btn-icon" title="Statistiques de l'équipe">📊</button>
+      <div class="notif-wrapper">
+        <button id="notif-btn" class="btn btn-icon" title="Notifications">🔔<span id="notif-badge" class="notif-badge hidden">0</span></button>
+        <div id="notif-panel" class="notif-panel hidden">
+          <div class="notif-panel-header">
+            <span>Boîte de réception</span>
+            <button type="button" id="notif-mark-all-btn" class="btn-link">Tout marquer comme lu</button>
+          </div>
+          <div id="notif-list" class="notif-list"></div>
+        </div>
+      </div>
       <button id="team-btn" class="btn btn-icon" title="Équipe">👥</button>
       <button id="settings-btn" class="btn btn-icon" title="Paramètres">⚙️</button>
     </header>
@@ -85,6 +96,41 @@
 
 </div>
 
+<!-- Page idées (routée en #/idea/<projet>) -->
+<div id="idea-page" class="page-overlay hidden">
+  <header class="page-header">
+    <button type="button" id="idea-page-back" class="page-back-btn">← Retour</button>
+    <span class="page-title" id="idea-page-title">💡 Idées</span>
+  </header>
+  <div class="page-body">
+    <form id="idea-form" class="idea-toolbar">
+      <div class="idea-composer">
+        <textarea id="idea-input" rows="2" placeholder="Note une idée et appuie sur Entrée…"></textarea>
+        <div class="dropzone dropzone-compact" id="idea-dropzone">
+          <span class="dropzone-icon">🖼️</span>
+          <span>Glisse une image ici, ou clique</span>
+          <input type="file" id="idea-image-input" accept="image/*" multiple hidden />
+        </div>
+        <div id="idea-composer-images" class="screenshots-list"></div>
+      </div>
+      <button type="submit" class="btn btn-primary">Ajouter</button>
+    </form>
+    <div id="idea-grid" class="idea-grid"></div>
+  </div>
+</div>
+
+<!-- Page statistiques (routée en #/stats) -->
+<div id="stats-page" class="page-overlay hidden">
+  <header class="page-header">
+    <button type="button" id="stats-page-back" class="page-back-btn">← Retour</button>
+    <span class="page-title">📊 Statistiques de l'équipe</span>
+  </header>
+  <div class="page-body">
+    <p id="stats-unassigned" class="hint"></p>
+    <div id="stats-grid" class="stats-grid"></div>
+  </div>
+</div>
+
 <!-- Modale tâche -->
 <div id="task-modal" class="modal-overlay hidden">
   <div class="modal modal-wide">
@@ -92,7 +138,37 @@
       <h2 id="task-modal-title">Nouvelle tâche</h2>
       <button class="btn-close" id="task-modal-close">✕</button>
     </div>
-    <form id="task-form" class="modal-body">
+
+    <!-- Vue lecture seule -->
+    <div id="task-view" class="modal-body task-view hidden">
+      <div id="task-view-badges" class="task-view-badges"></div>
+      <h3 id="task-view-title" class="task-view-title"></h3>
+      <p id="task-view-description" class="task-view-description"></p>
+      <div id="task-view-meta" class="task-view-meta"></div>
+      <div id="task-view-screenshots" class="task-view-screenshots"></div>
+
+      <div class="task-comments">
+        <h4>💬 Commentaires</h4>
+        <div id="task-comments-list" class="task-comments-list"></div>
+        <form id="comment-form" class="comment-form">
+          <select id="comment-author">
+            <option value="">Écrire en tant que…</option>
+          </select>
+          <textarea id="comment-text" rows="2" placeholder="Écrire un commentaire… (ex: bloqué, question, mise à jour)"></textarea>
+          <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="task-view-delete-btn" class="btn btn-danger">Supprimer</button>
+        <div class="modal-footer-right">
+          <button type="button" id="task-view-edit-btn" class="btn btn-primary">✏️ Modifier</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Édition -->
+    <form id="task-form" class="modal-body hidden">
       <input type="hidden" id="task-id" />
 
       <label>Titre *
@@ -166,23 +242,6 @@
       </div>
       <p id="task-error" class="error hidden"></p>
     </form>
-  </div>
-</div>
-
-<!-- Modale tableau d'idées -->
-<div id="idea-modal" class="modal-overlay hidden">
-  <div class="modal modal-large">
-    <div class="modal-header">
-      <h2 id="idea-modal-title">💡 Idées</h2>
-      <button class="btn-close" id="idea-modal-close">✕</button>
-    </div>
-    <div class="idea-body">
-      <form id="idea-form" class="idea-toolbar">
-        <textarea id="idea-input" rows="2" placeholder="Note une idée et appuie sur Entrée…"></textarea>
-        <button type="submit" class="btn btn-primary">Ajouter</button>
-      </form>
-      <div id="idea-grid" class="idea-grid"></div>
-    </div>
   </div>
 </div>
 

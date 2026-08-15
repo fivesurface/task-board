@@ -70,6 +70,11 @@ C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date
 - **👥 Équipe** (bouton en haut) : ajoute tes coéquipiers (nom, rôle/badge comme "Mappeur" ou "Dev", ID Discord). Assigne ensuite chaque tâche à quelqu'un dans sa fiche — filtre le tableau par membre pour voir qui fait quoi
 - **Mentions Discord réelles** : dans le message du matin, la personne assignée à une tâche du jour est @-mentionnée (vraie notification Discord, pas juste écrite en texte). Coche "Me notifier à chaque message" sur ta propre fiche membre pour être @-mentionné à chaque envoi, assigné ou non
 - **Escalade automatique** : une tâche en retard depuis 3 jours ou plus est mise en évidence (🔥, encadré rouge pulsant) sur le site et dans le message Discord, pour ne pas l'oublier. Une tâche sans échéance qui traîne depuis 5 jours ou plus est aussi signalée (⏳)
+- **Idées avec médias** : la page Idées (accessible en cliquant sur un projet) est maintenant une vraie page plein écran (avec sa propre URL, ex: `#/idea/Cooper%20Hills`) où tu peux aussi glisser des images en plus du texte
+- **Fiche tâche : vue puis édition** : cliquer sur une tâche l'ouvre d'abord en lecture seule (titre, badges, description, captures, commentaires) — clique sur **✏️ Modifier** pour passer en édition
+- **Commentaires** : en bas de chaque fiche tâche, on peut laisser un commentaire (ex: "je n'ai pas le fichier") en choisissant qui écrit. Ça crée une notification
+- **🔔 Boîte de réception** : le bouton cloche en haut affiche les commentaires non lus, avec un badge de compteur — clique dessus pour ouvrir la tâche concernée
+- **📊 Statistiques** : page dédiée (bouton 📊) montrant, par membre de l'équipe, le nombre de tâches assignées, terminées, en cours, à faire, et le taux de complétion
 
 ## Structure du projet
 ```
