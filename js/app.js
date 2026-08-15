@@ -142,16 +142,18 @@ function render() {
   renderProjectPills();
 }
 
+function getKnownProjects() {
+  return [...new Set(state.tasks.map((t) => t.project).filter(Boolean))].sort();
+}
+
 function renderProjectFilter() {
   const select = $('#project-filter');
   const current = select.value;
-  const projects = [...new Set(state.tasks.map((t) => t.project).filter(Boolean))].sort();
+  const projects = getKnownProjects();
   select.innerHTML = '<option value="">Tous les projets</option>' +
     projects.map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
   select.value = projects.includes(current) ? current : '';
-
-  const datalist = $('#project-list');
-  datalist.innerHTML = projects.map((p) => `<option value="${escapeHtml(p)}">`).join('');
+  select._customSelectRefresh?.();
 }
 
 function renderBoard() {
@@ -228,10 +230,10 @@ function renderSidebar() {
     </div>
   `;
 
-  // "À traiter aujourd'hui / en retard" : tâches urgentes (peu importe la date)
-  // + tâches dont l'échéance est aujourd'hui ou dépassée.
+  // Toutes les tâches restantes, triées par urgence puis par échéance
+  // (les plus urgentes / les plus proches en premier).
   const attention = remaining
-    .filter((t) => t.urgency === 'urgent' || (t.dueDate && t.dueDate <= today))
+    .slice()
     .sort((a, b) => {
       const rankDiff = (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
       if (rankDiff !== 0) return rankDiff;
@@ -240,7 +242,7 @@ function renderSidebar() {
 
   const list = $('#attention-list');
   if (attention.length === 0) {
-    list.innerHTML = '<p class="attention-empty">Rien d\'urgent ni en retard.</p>';
+    list.innerHTML = '<p class="attention-empty">Rien à faire pour l\'instant 🎉</p>';
   } else {
     list.innerHTML = attention.map((t) => {
       const overdue = t.dueDate && t.dueDate < today;
@@ -366,6 +368,89 @@ function escapeHtml(str) {
 }
 
 // ---------------------------------------------------------------------
+// Menus déroulants personnalisés (remplacent les <select> natifs)
+// ---------------------------------------------------------------------
+function enhanceSelect(selectEl, extraClass) {
+  selectEl.style.display = 'none';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'custom-select' + (extraClass ? ' ' + extraClass : '');
+  wrapper.innerHTML = `
+    <button type="button" class="custom-select-trigger">
+      <span class="custom-select-label"></span>
+      <span class="custom-select-arrow">▾</span>
+    </button>
+    <div class="custom-select-menu hidden"></div>
+  `;
+  selectEl.insertAdjacentElement('afterend', wrapper);
+
+  const trigger = wrapper.querySelector('.custom-select-trigger');
+  const label = wrapper.querySelector('.custom-select-label');
+  const menu = wrapper.querySelector('.custom-select-menu');
+
+  function build() {
+    label.textContent = selectEl.options[selectEl.selectedIndex]?.textContent || '';
+    menu.innerHTML = [...selectEl.options].map((o) => `
+      <div class="custom-select-option ${o.value === selectEl.value ? 'active' : ''}" data-value="${escapeHtml(o.value)}">${escapeHtml(o.textContent)}</div>
+    `).join('');
+  }
+  build();
+  selectEl._customSelectRefresh = build;
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.custom-select-menu').forEach((m) => { if (m !== menu) m.classList.add('hidden'); });
+    document.querySelectorAll('.autocomplete-menu').forEach((m) => m.classList.add('hidden'));
+    menu.classList.toggle('hidden');
+    wrapper.classList.toggle('open', !menu.classList.contains('hidden'));
+  });
+
+  menu.addEventListener('click', (e) => {
+    const opt = e.target.closest('.custom-select-option');
+    if (!opt) return;
+    selectEl.value = opt.dataset.value;
+    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    build();
+    menu.classList.add('hidden');
+    wrapper.classList.remove('open');
+  });
+}
+
+function bindProjectAutocomplete() {
+  const input = $('#task-project');
+  const menu = $('#project-autocomplete-menu');
+
+  function show() {
+    const query = input.value.trim().toLowerCase();
+    const projects = getKnownProjects().filter((p) => !query || p.toLowerCase().includes(query));
+    menu.innerHTML = projects.length
+      ? projects.map((p) => `<div class="autocomplete-option" data-value="${escapeHtml(p)}">${escapeHtml(p)}</div>`).join('')
+      : '<div class="autocomplete-empty">Aucun projet existant — tape pour en créer un nouveau.</div>';
+    menu.classList.remove('hidden');
+  }
+
+  input.addEventListener('focus', show);
+  input.addEventListener('input', show);
+  menu.addEventListener('click', (e) => {
+    const opt = e.target.closest('.autocomplete-option');
+    if (!opt) return;
+    input.value = opt.dataset.value;
+    menu.classList.add('hidden');
+  });
+}
+
+function bindDropdownOutsideClick() {
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-select')) {
+      document.querySelectorAll('.custom-select-menu').forEach((m) => m.classList.add('hidden'));
+      document.querySelectorAll('.custom-select.open').forEach((w) => w.classList.remove('open'));
+    }
+    if (!e.target.closest('.autocomplete')) {
+      document.querySelectorAll('.autocomplete-menu').forEach((m) => m.classList.add('hidden'));
+    }
+  });
+}
+
+// ---------------------------------------------------------------------
 // Glisser-déposer entre colonnes
 // ---------------------------------------------------------------------
 function bindDragAndDrop() {
@@ -431,6 +516,8 @@ function openTaskModal(task) {
   $('#task-status').value = task?.status || 'todo';
   $('#task-due').value = task?.dueDate || '';
   $('#task-reminder').value = task?.reminderDate || '';
+  $('#task-urgency')._customSelectRefresh?.();
+  $('#task-status')._customSelectRefresh?.();
   $('#task-delete-btn').classList.toggle('hidden', isNew);
   $('#task-error').classList.add('hidden');
   $('#task-screenshots-input').value = '';
@@ -585,6 +672,11 @@ function handleSettingsSubmit(e) {
 // ---------------------------------------------------------------------
 function bindGlobalEvents() {
   bindDragAndDrop();
+  bindDropdownOutsideClick();
+  bindProjectAutocomplete();
+  enhanceSelect($('#project-filter'), 'select-narrow');
+  enhanceSelect($('#task-urgency'));
+  enhanceSelect($('#task-status'));
 
   $('#new-task-btn').addEventListener('click', () => openTaskModal(null));
   $('#task-modal-close').addEventListener('click', closeTaskModal);

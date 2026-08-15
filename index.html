@@ -35,7 +35,7 @@
     <div class="stat-grid" id="stat-grid"></div>
 
     <div class="attention-block">
-      <h2>À traiter aujourd'hui / en retard</h2>
+      <h2>À faire (par priorité)</h2>
       <div id="attention-list" class="attention-list"></div>
     </div>
 
@@ -85,7 +85,7 @@
 
 <!-- Modale tâche -->
 <div id="task-modal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal modal-wide">
     <div class="modal-header">
       <h2 id="task-modal-title">Nouvelle tâche</h2>
       <button class="btn-close" id="task-modal-close">✕</button>
@@ -99,8 +99,10 @@
 
       <div class="form-row">
         <label>Projet
-          <input type="text" id="task-project" list="project-list" placeholder="Ex: Cooper Hills" />
-          <datalist id="project-list"></datalist>
+          <div class="autocomplete" id="project-autocomplete">
+            <input type="text" id="task-project" placeholder="Ex: Cooper Hills" autocomplete="off" />
+            <div class="autocomplete-menu hidden" id="project-autocomplete-menu"></div>
+          </div>
         </label>
         <label>Urgence
           <select id="task-urgency">
@@ -119,7 +121,7 @@
       </label>
 
       <label>Description
-        <textarea id="task-description" rows="4" placeholder="Détails, contexte, liens…"></textarea>
+        <textarea id="task-description" rows="3" placeholder="Détails, contexte, liens…"></textarea>
       </label>
 
       <div class="form-row">
