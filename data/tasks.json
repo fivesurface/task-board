@@ -56,6 +56,23 @@
       "screenshots": [],
       "createdAt": "2026-08-15T14:42:37.835Z",
       "updatedAt": "2026-08-15T14:42:37.835Z"
+    },
+    {
+      "id": "7370e3a3-c732-4398-842a-f7c8281289db",
+      "title": "Finir le siteweb",
+      "project": "Discord",
+      "labels": [
+        "via Claude IA"
+      ],
+      "description": "Faire le système de devis personalisé et automaiquete",
+      "urgency": "faible",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-08-22",
+      "reminderDate": null,
+      "screenshots": [],
+      "createdAt": "2026-08-15T14:49:21.044Z",
+      "updatedAt": "2026-08-15T14:49:21.044Z"
     }
   ]
 }
