@@ -66,6 +66,7 @@ C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date
 - **📨 Envoyer sur Discord** (en haut) déclenche l'envoi du résumé Discord immédiatement, sans attendre 9h — pratique pour tester ou pour prévenir d'un changement en cours de journée
 - Chaque modification (créer/déplacer/supprimer une tâche, ajouter une capture) crée un petit commit automatique dans le dépôt — c'est normal, c'est comme ça que les données sont sauvegardées
 - Le dépôt et le jeton restent enregistrés dans ton navigateur : pas besoin de les ressaisir à chaque visite (sauf si tu changes d'appareil ou vides le cache)
+- **💡 Idées par projet** : clique sur le nom d'un projet (sur une carte, ou dans la liste "Idées par projet" à gauche) pour ouvrir un grand tableau libre où noter toutes tes idées en vrac, sans passer par une tâche
 
 ## Structure du projet
 ```

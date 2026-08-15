@@ -38,6 +38,12 @@
       <h2>À traiter aujourd'hui / en retard</h2>
       <div id="attention-list" class="attention-list"></div>
     </div>
+
+    <div class="projects-block">
+      <h2>💡 Idées par projet</h2>
+      <div id="project-pills" class="project-pills"></div>
+      <p id="project-pills-empty" class="attention-empty hidden">Crée une tâche avec un projet pour commencer.</p>
+    </div>
   </aside>
 
   <div class="main">
@@ -151,6 +157,23 @@
       </div>
       <p id="task-error" class="error hidden"></p>
     </form>
+  </div>
+</div>
+
+<!-- Modale tableau d'idées -->
+<div id="idea-modal" class="modal-overlay hidden">
+  <div class="modal modal-large">
+    <div class="modal-header">
+      <h2 id="idea-modal-title">💡 Idées</h2>
+      <button class="btn-close" id="idea-modal-close">✕</button>
+    </div>
+    <div class="idea-body">
+      <form id="idea-form" class="idea-toolbar">
+        <textarea id="idea-input" rows="2" placeholder="Note une idée et appuie sur Entrée…"></textarea>
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+      </form>
+      <div id="idea-grid" class="idea-grid"></div>
+    </div>
   </div>
 </div>
 

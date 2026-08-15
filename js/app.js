@@ -2,11 +2,16 @@ import { config, SITE_PASSPHRASE, isUnlocked, unlock } from './config.js';
 import { getJsonFile, putJsonFile, putImageFile, fileToBase64, dispatchWorkflow } from './github.js';
 
 const TASKS_PATH = 'data/tasks.json';
+const IDEAS_PATH = 'data/ideas.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
+const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
 
 const state = {
   tasks: [],
   sha: null,
+  ideas: [],
+  ideasSha: null,
+  currentIdeaProject: null,
   filters: { search: '', project: '', urgency: null },
   editingScreenshots: [],
   editingLabels: [],
@@ -48,6 +53,7 @@ function start() {
     return;
   }
   loadTasks();
+  loadIdeas();
 }
 
 async function loadTasks() {
@@ -84,6 +90,32 @@ async function saveTasks(commitMessage) {
   }
 }
 
+async function loadIdeas() {
+  try {
+    const { data, sha } = await getJsonFile(config.owner, config.repo, IDEAS_PATH, config.token);
+    state.ideas = data?.ideas || [];
+    state.ideasSha = sha;
+    renderProjectPills();
+  } catch (e) {
+    console.error("Impossible de charger les idées :", e);
+  }
+}
+
+async function saveIdeas(commitMessage) {
+  try {
+    const { sha: freshSha } = await getJsonFile(config.owner, config.repo, IDEAS_PATH, config.token);
+    const result = await putJsonFile(
+      config.owner, config.repo, IDEAS_PATH, config.token,
+      { ideas: state.ideas }, freshSha || state.ideasSha, commitMessage
+    );
+    state.ideasSha = result.content.sha;
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer les idées sur GitHub :\n" + e.message);
+    throw e;
+  }
+}
+
 function setSyncStatus(text, kind) {
   const el = $('#sync-status');
   el.textContent = text;
@@ -107,6 +139,7 @@ function render() {
   renderProjectFilter();
   renderBoard();
   renderSidebar();
+  renderProjectPills();
 }
 
 function renderProjectFilter() {
@@ -143,7 +176,7 @@ function renderCard(task) {
   card.innerHTML = `
     <div class="task-card-title">${escapeHtml(task.title)}</div>
     <div class="task-card-meta">
-      ${task.project ? `<span class="task-project-chip">${escapeHtml(task.project)}</span>` : ''}
+      ${task.project ? `<button type="button" class="task-project-chip" data-project="${escapeHtml(task.project)}">${escapeHtml(task.project)}</button>` : ''}
       ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : '📅 '}${task.dueDate}</span>` : ''}
       ${task.screenshots?.length ? `<span class="task-shots">🖼️ ${task.screenshots.length}</span>` : ''}
     </div>
@@ -151,6 +184,13 @@ function renderCard(task) {
   `;
 
   card.addEventListener('click', () => openTaskModal(task));
+  const projectChip = card.querySelector('.task-project-chip');
+  if (projectChip) {
+    projectChip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openIdeaBoard(projectChip.dataset.project);
+    });
+  }
   card.addEventListener('dragstart', (e) => {
     card.classList.add('dragging');
     e.dataTransfer.setData('text/plain', task.id);
@@ -219,6 +259,106 @@ function renderSidebar() {
       if (task) openTaskModal(task);
     });
   });
+}
+
+// ---------------------------------------------------------------------
+// Tableau d'idées par projet
+// ---------------------------------------------------------------------
+function renderProjectPills() {
+  const el = $('#project-pills');
+  if (!el) return;
+  const projects = [...new Set([
+    ...state.tasks.map((t) => t.project).filter(Boolean),
+    ...state.ideas.map((i) => i.project).filter(Boolean),
+  ])].sort();
+
+  $('#project-pills-empty').classList.toggle('hidden', projects.length > 0);
+  el.innerHTML = projects.map((p) => {
+    const count = state.ideas.filter((i) => i.project === p).length;
+    return `
+      <button type="button" class="project-pill" data-project="${escapeHtml(p)}">
+        <span class="project-pill-icon">💡</span>
+        <span>${escapeHtml(p)}</span>
+        ${count ? `<span class="project-pill-count">${count}</span>` : ''}
+      </button>
+    `;
+  }).join('');
+
+  el.querySelectorAll('.project-pill').forEach((btn) => {
+    btn.addEventListener('click', () => openIdeaBoard(btn.dataset.project));
+  });
+}
+
+function colorForId(id) {
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return IDEA_COLORS[hash % IDEA_COLORS.length];
+}
+
+function openIdeaBoard(project) {
+  state.currentIdeaProject = project;
+  $('#idea-modal-title').textContent = `💡 Idées — ${project}`;
+  $('#idea-input').value = '';
+  renderIdeaGrid();
+  $('#idea-modal').classList.remove('hidden');
+  $('#idea-input').focus();
+}
+
+function closeIdeaModal() {
+  $('#idea-modal').classList.add('hidden');
+}
+
+function renderIdeaGrid() {
+  const grid = $('#idea-grid');
+  const ideas = state.ideas
+    .filter((i) => i.project === state.currentIdeaProject)
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+  if (ideas.length === 0) {
+    grid.innerHTML = '<p class="idea-empty">Aucune idée pour l\'instant — note tout ce qui te passe par la tête.</p>';
+    return;
+  }
+
+  grid.innerHTML = ideas.map((idea) => `
+    <div class="idea-card" style="border-left-color:${colorForId(idea.id)}" data-id="${idea.id}">
+      <div class="idea-card-text">${escapeHtml(idea.text)}</div>
+      <div class="idea-card-footer">
+        <span class="idea-card-date">${new Date(idea.createdAt).toLocaleDateString('fr-FR')}</span>
+        <button type="button" class="idea-card-delete" data-id="${idea.id}">✕ Supprimer</button>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.idea-card-delete').forEach((btn) => {
+    btn.addEventListener('click', () => handleIdeaDelete(btn.dataset.id));
+  });
+}
+
+async function handleIdeaSubmit(e) {
+  e.preventDefault();
+  const input = $('#idea-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const idea = {
+    id: crypto.randomUUID(),
+    project: state.currentIdeaProject,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+  state.ideas.push(idea);
+  input.value = '';
+  renderIdeaGrid();
+  renderProjectPills();
+  try {
+    await saveIdeas(`Ajouter une idée pour "${state.currentIdeaProject}"`);
+  } catch { /* déjà notifié dans saveIdeas */ }
+}
+
+async function handleIdeaDelete(id) {
+  state.ideas = state.ideas.filter((i) => i.id !== id);
+  renderIdeaGrid();
+  renderProjectPills();
+  await saveIdeas('Supprimer une idée');
 }
 
 function escapeHtml(str) {
@@ -437,6 +577,7 @@ function handleSettingsSubmit(e) {
   config.token = $('#cfg-token').value.trim();
   $('#settings-modal').classList.add('hidden');
   loadTasks();
+  loadIdeas();
 }
 
 // ---------------------------------------------------------------------
@@ -473,6 +614,15 @@ function bindGlobalEvents() {
 
   $('#discord-now-btn').addEventListener('click', handleDiscordNow);
 
+  $('#idea-modal-close').addEventListener('click', closeIdeaModal);
+  $('#idea-form').addEventListener('submit', handleIdeaSubmit);
+  $('#idea-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleIdeaSubmit(e);
+    }
+  });
+
   $('#settings-btn').addEventListener('click', () => openSettingsModal(false));
   $('#settings-modal-close').addEventListener('click', closeSettingsModal);
   $('#settings-form').addEventListener('submit', handleSettingsSubmit);
@@ -499,6 +649,7 @@ function bindGlobalEvents() {
       if (e.target === overlay) {
         if (overlay.id === 'task-modal') closeTaskModal();
         if (overlay.id === 'settings-modal') closeSettingsModal();
+        if (overlay.id === 'idea-modal') closeIdeaModal();
       }
     });
   });
