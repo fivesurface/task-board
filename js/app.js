@@ -10,6 +10,7 @@ const APPEARANCE_PATH = 'data/appearance.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
 const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
 const STATUS_LABEL = { todo: 'À faire', doing: 'En cours', done: 'Terminé' };
+const STATUS_DOT = { todo: 'gray', doing: 'blue', done: 'green' };
 const URGENCY_TEXT = { urgent: 'Urgent', moyen: 'Moyen', faible: 'Faible' };
 
 function urgencyBadge(urgency) {
@@ -23,6 +24,8 @@ const state = {
   ideasSha: null,
   currentIdeaProject: null,
   editingIdeaImages: [],
+  editingIdeaId: null,
+  editingIdeaDetailImages: [],
   members: [],
   membersSha: null,
   editingMemberId: null,
@@ -399,6 +402,7 @@ function renderCard(task) {
   const overdue = task.dueDate && task.dueDate < todayStr() && task.status !== 'done';
   const labels = task.labels || [];
   const shots = task.screenshots || [];
+  const comments = task.comments || [];
   const assignee = task.assigneeId ? state.members.find((m) => m.id === task.assigneeId) : null;
   card.innerHTML = `
     <div class="task-card-title"><span class="dot dot-${task.urgency}"></span>${escapeHtml(task.title)}</div>
@@ -406,8 +410,9 @@ function renderCard(task) {
       ${task.project ? `<button type="button" class="task-project-chip" data-project="${escapeHtml(task.project)}">${escapeHtml(task.project)}</button>` : ''}
       ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? icon('alert-triangle') : icon('calendar')}${task.dueDate}</span>` : ''}
       ${assignee ? `<span class="assignee-chip"><span class="assignee-chip-avatar">${escapeHtml(assignee.name[0] || '?').toUpperCase()}</span>${escapeHtml(assignee.name)}</span>` : ''}
+      ${comments.length ? `<span class="task-comment-count" title="${comments.length} commentaire(s)">${icon('message-circle')}${comments.length}</span>` : ''}
     </div>
-    ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}</div>` : ''}
+    ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${icon('tag')} ${escapeHtml(l)}</span>`).join('')}</div>` : ''}
     ${shots.length ? `<div class="task-card-thumbs">${shots.slice(0, 3).map((u) => `<span class="task-card-thumb"><img src="${u}" loading="lazy" /></span>`).join('')}${shots.length > 3 ? `<span class="task-card-thumb-more">+${shots.length - 3}</span>` : ''}</div>` : ''}
     ${escalation ? `<div class="escalation ${escalation.cls}">${escalation.text}</div>` : ''}
   `;
@@ -592,20 +597,132 @@ function renderIdeaGrid() {
     return;
   }
 
-  grid.innerHTML = ideas.map((idea) => `
+  grid.innerHTML = ideas.map((idea) => {
+    const commentCount = idea.comments?.length || 0;
+    return `
     <div class="idea-card" style="border-left-color:${colorForId(idea.id)}" data-id="${idea.id}">
       ${idea.text ? `<div class="idea-card-text">${escapeHtml(idea.text)}</div>` : ''}
-      ${idea.images?.length ? `<div class="idea-card-images">${idea.images.map((u) => `<a class="idea-card-img-link" href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" /></a>`).join('')}</div>` : ''}
+      ${idea.images?.length ? `<div class="idea-card-images">${idea.images.map((u) => `<span class="idea-card-img-link"><img src="${u}" loading="lazy" /></span>`).join('')}</div>` : ''}
       <div class="idea-card-footer">
         <span class="idea-card-date">${new Date(idea.createdAt).toLocaleDateString('fr-FR')}</span>
-        <button type="button" class="idea-card-delete" data-id="${idea.id}">${icon('trash')} Supprimer</button>
+        ${commentCount ? `<span class="task-comment-count">${icon('message-circle')}${commentCount}</span>` : ''}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
-  grid.querySelectorAll('.idea-card-delete').forEach((btn) => {
-    btn.addEventListener('click', () => handleIdeaDelete(btn.dataset.id));
+  grid.querySelectorAll('.idea-card').forEach((card) => {
+    card.addEventListener('click', () => openIdeaDetail(card.dataset.id));
   });
+}
+
+// ---------------------------------------------------------------------
+// Modale de détail d'une idée (édition + discussion)
+// ---------------------------------------------------------------------
+function openIdeaDetail(ideaId) {
+  const idea = state.ideas.find((i) => i.id === ideaId);
+  if (!idea) return;
+  state.editingIdeaId = ideaId;
+  $('#idea-detail-text').value = idea.text || '';
+  state.editingIdeaDetailImages = idea.images ? [...idea.images] : [];
+  renderIdeaDetailImages();
+  renderIdeaComments(idea);
+  populateIdeaCommentAuthorSelect();
+  $('#idea-detail-modal').classList.remove('hidden');
+}
+
+function closeIdeaDetail() {
+  $('#idea-detail-modal').classList.add('hidden');
+  state.editingIdeaId = null;
+}
+
+function renderIdeaDetailImages() {
+  const el = $('#idea-detail-images');
+  el.innerHTML = state.editingIdeaDetailImages.map((url, i) => `
+    <div class="screenshot-thumb">
+      <img src="${url}" loading="lazy" />
+      <button type="button" class="screenshot-remove" data-idx="${i}">${icon('x')}</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.screenshot-remove').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.editingIdeaDetailImages.splice(Number(btn.dataset.idx), 1);
+      renderIdeaDetailImages();
+    });
+  });
+}
+
+async function handleIdeaDetailImageUpload(files) {
+  await uploadImages(files, 'idea-' + state.editingIdeaId, state.editingIdeaDetailImages, renderIdeaDetailImages, $('#idea-detail-dropzone'));
+}
+
+async function handleIdeaDetailSave() {
+  const idea = state.ideas.find((i) => i.id === state.editingIdeaId);
+  if (!idea) return;
+  idea.text = $('#idea-detail-text').value.trim();
+  idea.images = [...state.editingIdeaDetailImages];
+  closeIdeaDetail();
+  renderIdeaGrid();
+  try {
+    await saveIdeas('Modifier une idée');
+  } catch { /* déjà notifié dans saveIdeas */ }
+}
+
+async function handleIdeaDetailDelete() {
+  if (!state.editingIdeaId) return;
+  if (!confirm('Supprimer cette idée définitivement ?')) return;
+  const id = state.editingIdeaId;
+  closeIdeaDetail();
+  await handleIdeaDelete(id);
+}
+
+function renderIdeaComments(idea) {
+  const list = $('#idea-comments-list');
+  const comments = idea.comments || [];
+  $('#idea-comments-title').textContent = comments.length ? `Discussion (${comments.length})` : 'Discussion';
+  if (comments.length === 0) {
+    list.innerHTML = '<p class="comment-empty">Aucun commentaire pour l\'instant.</p>';
+    return;
+  }
+  list.innerHTML = comments
+    .slice()
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+    .map((c) => {
+      const author = c.authorMemberId ? state.members.find((m) => m.id === c.authorMemberId) : null;
+      return `
+        <div class="comment-item">
+          <div class="comment-item-header">
+            <span class="comment-item-author">${escapeHtml(author?.name || "Quelqu'un")}</span>
+            <span class="comment-item-time">${new Date(c.createdAt).toLocaleString('fr-FR')}</span>
+          </div>
+          <div class="comment-item-text">${escapeHtml(c.text)}</div>
+        </div>
+      `;
+    }).join('');
+}
+
+function populateIdeaCommentAuthorSelect() {
+  const select = $('#idea-comment-author');
+  select.innerHTML = '<option value="">Écrire en tant que…</option>' +
+    state.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
+  select._customSelectRefresh?.();
+}
+
+async function handleIdeaCommentSubmit(e) {
+  e.preventDefault();
+  const idea = state.ideas.find((i) => i.id === state.editingIdeaId);
+  if (!idea) return;
+  const text = $('#idea-comment-text').value.trim();
+  if (!text) return;
+  const authorMemberId = $('#idea-comment-author').value || null;
+  idea.comments = idea.comments || [];
+  idea.comments.push({ id: crypto.randomUUID(), authorMemberId, text, createdAt: new Date().toISOString() });
+  $('#idea-comment-text').value = '';
+  renderIdeaComments(idea);
+  renderIdeaGrid();
+  try {
+    await saveIdeas('Commentaire sur une idée');
+  } catch { /* déjà notifié dans saveIdeas */ }
 }
 
 function renderIdeaComposerImages() {
@@ -1039,11 +1156,11 @@ function showTaskView(task) {
   const escalation = computeEscalation(task);
 
   $('#task-view-badges').innerHTML = `
-    <span class="badge-pill" style="background:var(--${task.urgency}-bg); color:var(--${task.urgency});">${urgencyBadge(task.urgency)}</span>
-    <span class="badge-pill">${STATUS_LABEL[task.status] || task.status}</span>
-    ${task.project ? `<span class="badge-pill">${escapeHtml(task.project)}</span>` : ''}
-    ${assignee ? `<span class="badge-pill">${icon('user')} ${escapeHtml(assignee.name)}</span>` : ''}
-    ${(task.labels || []).map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}
+    <span class="badge-pill badge-urgency" style="background:var(--${task.urgency}-bg); color:var(--${task.urgency});" title="Urgence">${urgencyBadge(task.urgency)}</span>
+    <span class="badge-pill" title="Statut"><span class="dot dot-${STATUS_DOT[task.status]}"></span>${STATUS_LABEL[task.status] || task.status}</span>
+    ${task.project ? `<span class="badge-pill" title="Projet">${icon('folder')} ${escapeHtml(task.project)}</span>` : ''}
+    ${assignee ? `<span class="badge-pill" title="Assigné à">${icon('user')} ${escapeHtml(assignee.name)}</span>` : ''}
+    ${(task.labels || []).map((l) => `<span class="label-chip" title="Étiquette">${icon('tag')} ${escapeHtml(l)}</span>`).join('')}
     ${escalation ? `<span class="escalation ${escalation.cls}">${escalation.text}</span>` : ''}
   `;
   $('#task-view-title').textContent = task.title;
@@ -1054,6 +1171,7 @@ function showTaskView(task) {
     ${task.dueDate ? `<span>${icon('calendar')}<strong>Échéance</strong> · ${task.dueDate}${overdue ? ' ' + icon('alert-triangle') : ''}</span>` : ''}
     ${task.reminderDate ? `<span>${icon('send')}<strong>Rappel Discord</strong> · ${task.reminderDate}</span>` : ''}
     <span>${icon('calendar')}<strong>Créée le</strong> · ${new Date(task.createdAt).toLocaleDateString('fr-FR')}</span>
+    ${task.updatedAt && task.updatedAt !== task.createdAt ? `<span>${icon('edit')}<strong>Modifiée</strong> · ${timeAgo(task.updatedAt)}</span>` : ''}
   `;
 
   $('#task-view-screenshots').innerHTML = (task.screenshots || [])
@@ -1102,6 +1220,7 @@ function showTaskEdit(task) {
 function renderComments(task) {
   const list = $('#task-comments-list');
   const comments = task.comments || [];
+  $('#task-comments-title').textContent = comments.length ? `Commentaires (${comments.length})` : 'Commentaires';
   if (comments.length === 0) {
     list.innerHTML = '<p class="comment-empty">Aucun commentaire pour l\'instant.</p>';
     return;
@@ -1128,6 +1247,7 @@ function populateCommentAuthorSelect(task) {
   select.innerHTML = '<option value="">Écrire en tant que…</option>' +
     state.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
   select.value = task.assigneeId || '';
+  select._customSelectRefresh?.();
 }
 
 async function handleCommentSubmit(e) {
@@ -1356,6 +1476,8 @@ function bindGlobalEvents() {
   enhanceSelect($('#task-urgency'));
   enhanceSelect($('#task-status'));
   enhanceSelect($('#task-assignee'));
+  enhanceSelect($('#comment-author'), 'select-narrow');
+  enhanceSelect($('#idea-comment-author'), 'select-narrow');
 
   $('#new-task-btn').addEventListener('click', () => openTaskModal(null));
   $('#task-modal-close').addEventListener('click', closeTaskModal);
@@ -1407,6 +1529,22 @@ function bindGlobalEvents() {
     e.preventDefault();
     ideaDropzone.classList.remove('drag-over');
     handleIdeaImageUpload([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')));
+  });
+
+  $('#idea-detail-close').addEventListener('click', closeIdeaDetail);
+  $('#idea-detail-cancel-btn').addEventListener('click', closeIdeaDetail);
+  $('#idea-detail-save-btn').addEventListener('click', handleIdeaDetailSave);
+  $('#idea-detail-delete-btn').addEventListener('click', handleIdeaDetailDelete);
+  $('#idea-comment-form').addEventListener('submit', handleIdeaCommentSubmit);
+  $('#idea-detail-image-input').addEventListener('change', (e) => handleIdeaDetailImageUpload([...e.target.files]));
+  const ideaDetailDropzone = $('#idea-detail-dropzone');
+  ideaDetailDropzone.addEventListener('click', () => $('#idea-detail-image-input').click());
+  ideaDetailDropzone.addEventListener('dragover', (e) => { e.preventDefault(); ideaDetailDropzone.classList.add('drag-over'); });
+  ideaDetailDropzone.addEventListener('dragleave', () => ideaDetailDropzone.classList.remove('drag-over'));
+  ideaDetailDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    ideaDetailDropzone.classList.remove('drag-over');
+    handleIdeaDetailImageUpload([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')));
   });
 
   $('#stats-btn').addEventListener('click', openStatsPage);
@@ -1471,6 +1609,7 @@ function bindGlobalEvents() {
         if (overlay.id === 'settings-modal') closeSettingsModal();
         if (overlay.id === 'team-modal') closeTeamModal();
         if (overlay.id === 'appearance-modal') closeAppearanceModal();
+        if (overlay.id === 'idea-detail-modal') closeIdeaDetail();
       }
     });
   });
