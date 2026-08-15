@@ -84,7 +84,10 @@ if (due.length === 0) {
       }
       const project = t.project ? ` _(${t.project})_` : '';
       const assigneeMember = t.assigneeId ? memberById[t.assigneeId] : null;
-      const assignee = assigneeMember ? ` · 👤 ${assigneeMember.name}` : '';
+      const assigneeTag = assigneeMember
+        ? (assigneeMember.discordId ? `<@${assigneeMember.discordId}>` : assigneeMember.name)
+        : null;
+      const assignee = assigneeTag ? ` · 👤 ${assigneeTag}` : '';
       if (assigneeMember?.discordId) mentionIds.add(assigneeMember.discordId);
       return `**${urgencyLabel[t.urgency] || t.urgency}** — ${t.title}${project}${assignee}${escalation}`;
     })
