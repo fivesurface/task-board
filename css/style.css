@@ -42,6 +42,27 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+#bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 18% 15%, rgba(10,132,255,0.16), transparent 42%),
+    radial-gradient(circle at 85% 25%, rgba(48,209,88,0.10), transparent 45%),
+    radial-gradient(circle at 60% 90%, rgba(10,132,255,0.10), transparent 40%),
+    var(--bg);
+  background-size: cover;
+  background-position: center;
+}
+#bg-layer.has-image {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.62), rgba(0,0,0,0.62)),
+    var(--bg-custom-image);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
 .hidden { display: none !important; }
 .muted { color: var(--text-dim); }
 
@@ -67,10 +88,6 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(10,132,255,0.10), transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(48,209,88,0.08), transparent 45%),
-    var(--bg);
   z-index: 100;
 }
 .lock-box {
@@ -603,14 +620,33 @@ button { font-family: inherit; cursor: pointer; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 .stats-card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 20px; }
 .stats-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.stats-card-identity { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .stats-card-name { font-weight: 700; font-size: 14px; }
 .stats-card-badge { font-size: 11px; color: var(--text-dim); }
 .stats-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
 .stats-row span:first-child { display: inline-flex; align-items: center; gap: 7px; }
 .stats-row:last-of-type { border-bottom: none; }
-.stats-bar-track { height: 6px; background: var(--bg-card-2); border-radius: var(--radius-pill); margin-top: 12px; overflow: hidden; }
-.stats-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), #30d158); }
-.stats-rate { text-align: right; font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+
+/* Anneau de progression (meter à une seule teinte, piste = même teinte plus claire) */
+.stats-ring {
+  --pct: 0%;
+  position: relative;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(var(--accent-dim) var(--pct), var(--accent-glow) var(--pct));
+}
+.stats-ring-inner {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
 
 /* Miniatures sur les cartes */
 .task-card-thumbs { display: flex; gap: 6px; margin-top: 9px; }
@@ -733,6 +769,26 @@ button { font-family: inherit; cursor: pointer; }
 .tag-chip button .icon { width: 10px; height: 10px; }
 .tag-chip button:hover { opacity: 1; }
 #task-label-input { border: none !important; background: none !important; padding: 2px !important; box-shadow: none !important; }
+
+/* Apparence */
+.color-row { display: flex; align-items: center; gap: 12px; flex-direction: row !important; }
+.color-row input[type="color"] {
+  width: 46px; height: 46px;
+  padding: 3px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; overflow: hidden; }
+.color-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+.color-row input[type="color"]::-moz-color-swatch { border: none; border-radius: 50%; }
+#appearance-image-preview { display: flex; }
+#appearance-image-preview:empty { display: none; }
+.appearance-preview-thumb { position: relative; width: 100%; height: 120px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.appearance-preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Dropzone */
 .dropzone {

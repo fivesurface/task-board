@@ -6,6 +6,7 @@ const TASKS_PATH = 'data/tasks.json';
 const IDEAS_PATH = 'data/ideas.json';
 const MEMBERS_PATH = 'data/members.json';
 const NOTIFICATIONS_PATH = 'data/notifications.json';
+const APPEARANCE_PATH = 'data/appearance.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
 const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
 const STATUS_LABEL = { todo: 'À faire', doing: 'En cours', done: 'Terminé' };
@@ -27,6 +28,9 @@ const state = {
   editingMemberId: null,
   notifications: [],
   notificationsSha: null,
+  appearance: { accentColor: '#0a84ff', backgroundImage: null },
+  appearanceSha: null,
+  editingBackgroundImage: null,
   currentTaskId: null,
   filters: { search: '', project: '', urgency: null, assignee: '' },
   editingScreenshots: [],
@@ -71,6 +75,7 @@ function start() {
   loadIdeas();
   loadMembers();
   loadNotifications();
+  loadAppearance();
   handleRoute();
 }
 
@@ -195,6 +200,107 @@ async function saveNotifications(commitMessage) {
 function refreshOpenPage() {
   if (!$('#idea-page').classList.contains('hidden')) renderIdeaGrid();
   if (!$('#stats-page').classList.contains('hidden')) renderStatsPage();
+}
+
+// ---------------------------------------------------------------------
+// Apparence (couleur d'accent + image de fond personnalisée)
+// ---------------------------------------------------------------------
+async function loadAppearance() {
+  try {
+    const { data, sha } = await getJsonFile(config.owner, config.repo, APPEARANCE_PATH, config.token);
+    state.appearance = { accentColor: data?.accentColor || '#0a84ff', backgroundImage: data?.backgroundImage || null };
+    state.appearanceSha = sha;
+    applyAppearance();
+  } catch (e) {
+    console.error("Impossible de charger l'apparence :", e);
+  }
+}
+
+async function saveAppearance(commitMessage) {
+  try {
+    const { sha: freshSha } = await getJsonFile(config.owner, config.repo, APPEARANCE_PATH, config.token);
+    const result = await putJsonFile(
+      config.owner, config.repo, APPEARANCE_PATH, config.token,
+      state.appearance, freshSha || state.appearanceSha, commitMessage
+    );
+    state.appearanceSha = result.content.sha;
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer l'apparence sur GitHub :\n" + e.message);
+    throw e;
+  }
+}
+
+function hexToRgb(hex) {
+  const parts = (hex || '#0a84ff').replace('#', '').match(/.{1,2}/g);
+  return parts ? parts.map((x) => parseInt(x, 16)) : [10, 132, 255];
+}
+
+function applyAppearance() {
+  const [r, g, b] = hexToRgb(state.appearance.accentColor);
+  const lighten = (v) => Math.min(255, Math.round(v + (255 - v) * 0.35));
+  document.documentElement.style.setProperty('--accent-dim', state.appearance.accentColor || '#0a84ff');
+  document.documentElement.style.setProperty('--accent', `rgb(${lighten(r)}, ${lighten(g)}, ${lighten(b)})`);
+  document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.18)`);
+
+  const layer = $('#bg-layer');
+  if (state.appearance.backgroundImage) {
+    document.documentElement.style.setProperty('--bg-custom-image', `url("${state.appearance.backgroundImage}")`);
+    layer.classList.add('has-image');
+  } else {
+    layer.classList.remove('has-image');
+  }
+}
+
+function openAppearanceModal() {
+  $('#appearance-color').value = state.appearance.accentColor || '#0a84ff';
+  state.editingBackgroundImage = state.appearance.backgroundImage || null;
+  renderAppearanceImagePreview();
+  $('#appearance-modal').classList.remove('hidden');
+}
+
+function closeAppearanceModal() {
+  $('#appearance-modal').classList.add('hidden');
+}
+
+function renderAppearanceImagePreview() {
+  const el = $('#appearance-image-preview');
+  el.innerHTML = state.editingBackgroundImage
+    ? `<div class="appearance-preview-thumb"><img src="${state.editingBackgroundImage}" loading="lazy" /><button type="button" class="screenshot-remove" id="appearance-image-remove">${icon('x')}</button></div>`
+    : '';
+  $('#appearance-image-remove')?.addEventListener('click', () => {
+    state.editingBackgroundImage = null;
+    renderAppearanceImagePreview();
+  });
+}
+
+async function handleAppearanceImageUpload(files) {
+  if (!files.length) return;
+  const uploaded = [];
+  await uploadImages([files[0]], 'bg', uploaded, () => {}, $('#appearance-dropzone'));
+  if (uploaded.length) {
+    state.editingBackgroundImage = uploaded[0];
+    renderAppearanceImagePreview();
+  }
+}
+
+async function handleAppearanceSubmit(e) {
+  e.preventDefault();
+  state.appearance = {
+    accentColor: $('#appearance-color').value || '#0a84ff',
+    backgroundImage: state.editingBackgroundImage || null,
+  };
+  applyAppearance();
+  closeAppearanceModal();
+  try {
+    await saveAppearance("Mettre à jour l'apparence");
+  } catch { /* déjà notifié dans saveAppearance */ }
+}
+
+function handleAppearanceReset() {
+  $('#appearance-color').value = '#0a84ff';
+  state.editingBackgroundImage = null;
+  renderAppearanceImagePreview();
 }
 
 function setSyncStatus(text, kind) {
@@ -613,18 +719,21 @@ function renderStatsPage() {
     return `
       <div class="stats-card">
         <div class="stats-card-header">
-          <span class="member-avatar">${escapeHtml((m.name[0] || '?').toUpperCase())}</span>
-          <div>
-            <div class="stats-card-name">${escapeHtml(m.name)}</div>
-            ${m.badge ? `<div class="stats-card-badge">${escapeHtml(m.badge)}</div>` : ''}
+          <div class="stats-card-identity">
+            <span class="member-avatar">${escapeHtml((m.name[0] || '?').toUpperCase())}</span>
+            <div>
+              <div class="stats-card-name">${escapeHtml(m.name)}</div>
+              ${m.badge ? `<div class="stats-card-badge">${escapeHtml(m.badge)}</div>` : ''}
+            </div>
+          </div>
+          <div class="stats-ring" style="--pct:${rate}%">
+            <div class="stats-ring-inner">${rate}%</div>
           </div>
         </div>
         <div class="stats-row"><span>Total assigné</span><span>${total}</span></div>
         <div class="stats-row"><span><span class="dot dot-green"></span> Terminées</span><span>${done}</span></div>
         <div class="stats-row"><span><span class="dot dot-blue"></span> En cours</span><span>${doing}</span></div>
         <div class="stats-row"><span><span class="dot dot-gray"></span> À faire</span><span>${todo}</span></div>
-        <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${rate}%"></div></div>
-        <div class="stats-rate">${rate}% terminé</div>
       </div>
     `;
   }).join('');
@@ -1232,6 +1341,7 @@ function handleSettingsSubmit(e) {
   loadIdeas();
   loadMembers();
   loadNotifications();
+  loadAppearance();
 }
 
 // ---------------------------------------------------------------------
@@ -1314,6 +1424,21 @@ function bindGlobalEvents() {
   $('#member-form').addEventListener('submit', handleMemberSubmit);
   $('#member-cancel-btn').addEventListener('click', resetMemberForm);
 
+  $('#appearance-btn').addEventListener('click', openAppearanceModal);
+  $('#appearance-modal-close').addEventListener('click', closeAppearanceModal);
+  $('#appearance-form').addEventListener('submit', handleAppearanceSubmit);
+  $('#appearance-reset-btn').addEventListener('click', handleAppearanceReset);
+  $('#appearance-image-input').addEventListener('change', (e) => handleAppearanceImageUpload([...e.target.files]));
+  const appearanceDropzone = $('#appearance-dropzone');
+  appearanceDropzone.addEventListener('click', () => $('#appearance-image-input').click());
+  appearanceDropzone.addEventListener('dragover', (e) => { e.preventDefault(); appearanceDropzone.classList.add('drag-over'); });
+  appearanceDropzone.addEventListener('dragleave', () => appearanceDropzone.classList.remove('drag-over'));
+  appearanceDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    appearanceDropzone.classList.remove('drag-over');
+    handleAppearanceImageUpload([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')).slice(0, 1));
+  });
+
   $('#settings-btn').addEventListener('click', () => openSettingsModal(false));
   $('#settings-modal-close').addEventListener('click', closeSettingsModal);
   $('#settings-form').addEventListener('submit', handleSettingsSubmit);
@@ -1345,6 +1470,7 @@ function bindGlobalEvents() {
         if (overlay.id === 'task-modal') closeTaskModal();
         if (overlay.id === 'settings-modal') closeSettingsModal();
         if (overlay.id === 'team-modal') closeTeamModal();
+        if (overlay.id === 'appearance-modal') closeAppearanceModal();
       }
     });
   });

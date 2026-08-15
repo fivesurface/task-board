@@ -78,6 +78,8 @@ C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date
 - **📊 Statistiques** : page dédiée (bouton 📊) montrant, par membre de l'équipe, le nombre de tâches assignées, terminées, en cours, à faire, et le taux de complétion
 - **Design** : interface façon panneaux flottants (fond translucide/flouté, coins arrondis, boutons pilule), avec de vraies icônes plutôt que des emojis
 - **Uploads plus fiables** : les images sont automatiquement redimensionnées/compressées dans le navigateur avant l'envoi (plus rapide, moins d'erreurs), envoyées en parallèle, avec une nouvelle tentative automatique en cas d'échec ponctuel
+- **🎨 Apparence** (bouton en haut) : choisis ta propre couleur d'accent et, en option, une image d'arrière-plan personnalisée (elle se voit à travers les panneaux flous). Ces réglages sont partagés avec toute l'équipe (stockés dans data/appearance.json)
+- **📊 Statistiques en anneau** : chaque membre a maintenant un anneau de progression (comme les anneaux d'activité iOS) plutôt qu'une simple barre
 
 ## Structure du projet
 ```

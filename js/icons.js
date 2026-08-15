@@ -25,6 +25,7 @@ const ICONS = {
   lock: `<svg class="icon" viewBox="0 0 24 24" ${S}><rect x="3" y="11" width="18" height="11" rx="3"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
   'chevron-down': `<svg class="icon" viewBox="0 0 24 24" ${S}><polyline points="6 9 12 15 18 9"/></svg>`,
   check: `<svg class="icon" viewBox="0 0 24 24" ${S}><polyline points="20 6 9 17 4 12"/></svg>`,
+  palette: `<svg class="icon" viewBox="0 0 24 24" ${S}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2a10 10 0 1 0 0 20c1 0 1.5-.5 1.5-1.5 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.6 1.6-1.6H16a4 4 0 0 0 4-4c0-5-4.5-10.5-8-10.5z"/></svg>`,
 };
 
 export function icon(name) {
