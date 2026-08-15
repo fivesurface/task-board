@@ -748,7 +748,7 @@ button { font-family: inherit; cursor: pointer; }
 .two-col-row > label textarea { height: 100%; min-height: 168px; }
 .screenshots-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .screenshots-col .screenshots-list { max-height: 118px; overflow-y: auto; }
-.hint { font-size: 11.5px; color: var(--text-faint); margin: -6px 0 0; font-weight: 400; }
+.hint { font-size: 11.5px; color: var(--text-faint); margin: 0; font-weight: 400; line-height: 1.5; }
 .modal-footer {
   display: flex;
   justify-content: space-between;
