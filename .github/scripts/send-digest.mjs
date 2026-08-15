@@ -51,6 +51,10 @@ const { tasks = [] } = await readJson('../../data/tasks.json', { tasks: [] });
 const { members = [] } = await readJson('../../data/members.json', { members: [] });
 const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
 
+// URL du site (GitHub Pages), pour faire un lien direct vers chaque tâche.
+const [repoOwner, repoName] = (process.env.GITHUB_REPOSITORY || '').split('/');
+const siteUrl = repoOwner && repoName ? `https://${repoOwner}.github.io/${repoName}` : null;
+
 const due = tasks.filter((t) => {
   if (t.status === 'done') return false;
   const trigger = t.reminderDate || t.dueDate;
@@ -60,12 +64,6 @@ const due = tasks.filter((t) => {
 const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 const urgencyLabel = { urgent: '🔴 Urgent', moyen: '🟡 Moyen', faible: '🟢 Faible' };
 due.sort((a, b) => (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9));
-
-// Ceux qui doivent être notifiés : toujours ceux marqués "alwaysNotify" (le/les chef(s)),
-// plus l'assigné de chaque tâche du jour. Les vraies notifications Discord ne se
-// déclenchent que sur les mentions placées dans "content", pas dans un embed.
-const mentionIds = new Set();
-for (const m of members) if (m.alwaysNotify && m.discordId) mentionIds.add(m.discordId);
 
 let description;
 if (due.length === 0) {
@@ -88,17 +86,14 @@ if (due.length === 0) {
         ? (assigneeMember.discordId ? `<@${assigneeMember.discordId}>` : assigneeMember.name)
         : null;
       const assignee = assigneeTag ? ` · 👤 ${assigneeTag}` : '';
-      if (assigneeMember?.discordId) mentionIds.add(assigneeMember.discordId);
-      return `**${urgencyLabel[t.urgency] || t.urgency}** — ${t.title}${project}${assignee}${escalation}`;
+      const titleText = siteUrl ? `[${t.title}](${siteUrl}/#/task/${t.id})` : t.title;
+      return `**${urgencyLabel[t.urgency] || t.urgency}** — ${titleText}${project}${assignee}${escalation}`;
     })
     .join('\n');
 }
 
-const mentionLine = mentionIds.size ? [...mentionIds].map((id) => `<@${id}>`).join(' ') : undefined;
-
 const payload = {
   username: 'Tableau de bord',
-  content: mentionLine,
   embeds: [
     {
       title: `📋 À faire aujourd'hui — ${today}`,
@@ -120,4 +115,4 @@ if (!res.ok) {
   process.exit(1);
 }
 
-console.log(`Message envoyé avec ${due.length} tâche(s), ${mentionIds.size} mention(s).`);
+console.log(`Message envoyé avec ${due.length} tâche(s).`);

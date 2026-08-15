@@ -83,6 +83,7 @@ async function loadTasks() {
     setSyncStatus('À jour');
     render();
     refreshOpenPage();
+    openTaskFromHashIfNeeded();
   } catch (e) {
     setSyncStatus('Erreur de chargement', 'error');
     console.error(e);
@@ -444,6 +445,17 @@ function handleRoute() {
   } else {
     hideAllPages();
   }
+}
+
+// Ouvre directement une tâche quand on arrive via un lien #/task/<id>
+// (ex: depuis le message Discord). Ne s'applique qu'une fois : le hash
+// est ensuite retiré pour ne pas rouvrir la fiche à chaque rechargement.
+function openTaskFromHashIfNeeded() {
+  const match = location.hash.match(/^#\/task\/(.+)$/);
+  if (!match) return;
+  const task = state.tasks.find((t) => t.id === decodeURIComponent(match[1]));
+  history.replaceState(null, '', location.pathname + location.search);
+  if (task) openTaskModal(task);
 }
 
 function showIdeaPage(project) {
