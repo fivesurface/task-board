@@ -1,3 +1,18 @@
 {
-  "members": []
+  "members": [
+    {
+      "id": "194c2f27-db43-45a3-befc-029de510fd13",
+      "name": "Sbyre",
+      "badge": "Graphiste",
+      "discordId": "1348994155468165154",
+      "alwaysNotify": true
+    },
+    {
+      "id": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "name": "Thyro Le Boss",
+      "badge": "Fondateur",
+      "discordId": "1250096161121898536",
+      "alwaysNotify": true
+    }
+  ]
 }

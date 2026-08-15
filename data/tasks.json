@@ -11,8 +11,9 @@
       "reminderDate": "2026-08-15",
       "screenshots": [],
       "createdAt": "2026-08-14T13:05:06.201Z",
-      "updatedAt": "2026-08-15T13:34:27.400Z",
-      "labels": []
+      "updatedAt": "2026-08-15T13:42:56.025Z",
+      "labels": [],
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274"
     },
     {
       "id": "700383ef-8f0d-461d-af7c-f9ce6177bd17",
@@ -25,8 +26,9 @@
       "reminderDate": "2026-08-15",
       "screenshots": [],
       "createdAt": "2026-08-14T13:06:18.216Z",
-      "updatedAt": "2026-08-14T21:01:45.268Z",
-      "labels": []
+      "updatedAt": "2026-08-15T13:42:59.497Z",
+      "labels": [],
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274"
     }
   ]
 }
