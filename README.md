@@ -67,6 +67,9 @@ C'est tout : à partir de maintenant, chaque tâche non terminée dont la **date
 - Chaque modification (créer/déplacer/supprimer une tâche, ajouter une capture) crée un petit commit automatique dans le dépôt — c'est normal, c'est comme ça que les données sont sauvegardées
 - Le dépôt et le jeton restent enregistrés dans ton navigateur : pas besoin de les ressaisir à chaque visite (sauf si tu changes d'appareil ou vides le cache)
 - **💡 Idées par projet** : clique sur le nom d'un projet (sur une carte, ou dans la liste "Idées par projet" à gauche) pour ouvrir un grand tableau libre où noter toutes tes idées en vrac, sans passer par une tâche
+- **👥 Équipe** (bouton en haut) : ajoute tes coéquipiers (nom, rôle/badge comme "Mappeur" ou "Dev", ID Discord). Assigne ensuite chaque tâche à quelqu'un dans sa fiche — filtre le tableau par membre pour voir qui fait quoi
+- **Mentions Discord réelles** : dans le message du matin, la personne assignée à une tâche du jour est @-mentionnée (vraie notification Discord, pas juste écrite en texte). Coche "Me notifier à chaque message" sur ta propre fiche membre pour être @-mentionné à chaque envoi, assigné ou non
+- **Escalade automatique** : une tâche en retard depuis 3 jours ou plus est mise en évidence (🔥, encadré rouge pulsant) sur le site et dans le message Discord, pour ne pas l'oublier. Une tâche sans échéance qui traîne depuis 5 jours ou plus est aussi signalée (⏳)
 
 ## Structure du projet
 ```

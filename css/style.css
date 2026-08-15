@@ -591,6 +591,88 @@ button { font-family: inherit; cursor: pointer; }
 }
 .idea-card-delete:hover { color: var(--urgent); }
 
+/* Équipe */
+.member-form { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 4px; }
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-size: 12.5px !important;
+  color: var(--text) !important;
+  font-weight: 500 !important;
+}
+.checkbox-label input { width: auto; padding: 0; accent-color: var(--accent-dim); }
+.member-list { display: flex; flex-direction: column; gap: 8px; }
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.member-row-info { display: flex; align-items: center; gap: 12px; }
+.member-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-dim), #34d399);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+}
+.member-row-name { font-weight: 650; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.member-row-discord { font-size: 11px; margin-top: 2px; }
+.member-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.badge-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+.badge-pill.badge-chief { background: var(--moyen-bg); color: var(--moyen); }
+.member-empty { color: var(--text-dim); font-style: italic; font-size: 12.5px; padding: 10px 0; }
+
+/* Assignation sur les cartes */
+.assignee-chip {
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+  padding: 3px 9px 3px 3px;
+  border-radius: 20px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.assignee-chip-avatar {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-dim), #34d399);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: white;
+}
+
+/* Escalade (tâches en retard / qui traînent) */
+.escalation {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-top: 8px;
+}
+.escalation.warning { background: var(--urgent-bg); color: var(--urgent); }
+.escalation.critical { background: var(--urgent); color: white; animation: pulse-escalation 1.6s ease-in-out infinite; }
+.escalation.stale { background: var(--moyen-bg); color: var(--moyen); }
+@keyframes pulse-escalation { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.task-card.critical { border-color: var(--urgent); }
+
 .screenshots-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .screenshot-thumb { position: relative; width: 84px; height: 84px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
 .screenshot-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }

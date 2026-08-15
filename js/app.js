@@ -3,6 +3,7 @@ import { getJsonFile, putJsonFile, putImageFile, fileToBase64, dispatchWorkflow 
 
 const TASKS_PATH = 'data/tasks.json';
 const IDEAS_PATH = 'data/ideas.json';
+const MEMBERS_PATH = 'data/members.json';
 const WORKFLOW_FILE = 'daily-digest.yml';
 const IDEA_COLORS = ['#3d7fe0', '#34d399', '#f0b429', '#ff5c5c', '#a78bfa', '#f472b6', '#22d3ee'];
 
@@ -12,7 +13,10 @@ const state = {
   ideas: [],
   ideasSha: null,
   currentIdeaProject: null,
-  filters: { search: '', project: '', urgency: null },
+  members: [],
+  membersSha: null,
+  editingMemberId: null,
+  filters: { search: '', project: '', urgency: null, assignee: '' },
   editingScreenshots: [],
   editingLabels: [],
 };
@@ -54,6 +58,7 @@ function start() {
   }
   loadTasks();
   loadIdeas();
+  loadMembers();
 }
 
 async function loadTasks() {
@@ -116,6 +121,33 @@ async function saveIdeas(commitMessage) {
   }
 }
 
+async function loadMembers() {
+  try {
+    const { data, sha } = await getJsonFile(config.owner, config.repo, MEMBERS_PATH, config.token);
+    state.members = data?.members || [];
+    state.membersSha = sha;
+    renderMemberList();
+    populateAssigneeSelects();
+  } catch (e) {
+    console.error("Impossible de charger l'équipe :", e);
+  }
+}
+
+async function saveMembers(commitMessage) {
+  try {
+    const { sha: freshSha } = await getJsonFile(config.owner, config.repo, MEMBERS_PATH, config.token);
+    const result = await putJsonFile(
+      config.owner, config.repo, MEMBERS_PATH, config.token,
+      { members: state.members }, freshSha || state.membersSha, commitMessage
+    );
+    state.membersSha = result.content.sha;
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer l'équipe sur GitHub :\n" + e.message);
+    throw e;
+  }
+}
+
 function setSyncStatus(text, kind) {
   const el = $('#sync-status');
   el.textContent = text;
@@ -126,20 +158,31 @@ function setSyncStatus(text, kind) {
 // Rendu
 // ---------------------------------------------------------------------
 function getFilteredTasks() {
-  const { search, project, urgency } = state.filters;
+  const { search, project, urgency, assignee } = state.filters;
   return state.tasks.filter((t) => {
     if (search && !(`${t.title} ${t.project} ${t.description || ''} ${(t.labels || []).join(' ')}`.toLowerCase().includes(search.toLowerCase()))) return false;
     if (project && t.project !== project) return false;
     if (urgency && t.urgency !== urgency) return false;
+    if (assignee && t.assigneeId !== assignee) return false;
     return true;
   });
 }
 
 function render() {
   renderProjectFilter();
+  renderAssigneeFilter();
   renderBoard();
   renderSidebar();
   renderProjectPills();
+}
+
+function renderAssigneeFilter() {
+  const select = $('#assignee-filter');
+  const current = select.value;
+  select.innerHTML = '<option value="">Tous les membres</option>' +
+    state.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
+  select.value = state.members.some((m) => m.id === current) ? current : '';
+  select._customSelectRefresh?.();
 }
 
 function getKnownProjects() {
@@ -167,22 +210,50 @@ function renderBoard() {
   }
 }
 
+function daysBetween(dateStr, todayIso) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const t = new Date(todayIso + 'T00:00:00');
+  return Math.round((t - d) / 86400000);
+}
+
+// Escalade : signale les tâches en retard depuis longtemps, ou qui traînent
+// sans date depuis trop longtemps, pour qu'elles ne passent pas inaperçues.
+function computeEscalation(task) {
+  if (task.status === 'done') return null;
+  const today = todayStr();
+  if (task.dueDate) {
+    const overdueDays = daysBetween(task.dueDate, today);
+    if (overdueDays >= 3) return { text: `🔥 En retard depuis ${overdueDays} j`, cls: 'critical' };
+    if (overdueDays >= 1) return { text: `⚠️ En retard depuis ${overdueDays} j`, cls: 'warning' };
+    return null;
+  }
+  if (task.createdAt) {
+    const openDays = Math.floor((Date.now() - new Date(task.createdAt).getTime()) / 86400000);
+    if (openDays >= 5) return { text: `⏳ En attente depuis ${openDays} j`, cls: 'stale' };
+  }
+  return null;
+}
+
 function renderCard(task) {
   const card = document.createElement('div');
-  card.className = `task-card ${task.urgency}`;
+  const escalation = computeEscalation(task);
+  card.className = `task-card ${task.urgency}${escalation?.cls === 'critical' ? ' critical' : ''}`;
   card.draggable = true;
   card.dataset.id = task.id;
 
   const overdue = task.dueDate && task.dueDate < todayStr() && task.status !== 'done';
   const labels = task.labels || [];
+  const assignee = task.assigneeId ? state.members.find((m) => m.id === task.assigneeId) : null;
   card.innerHTML = `
     <div class="task-card-title">${escapeHtml(task.title)}</div>
     <div class="task-card-meta">
       ${task.project ? `<button type="button" class="task-project-chip" data-project="${escapeHtml(task.project)}">${escapeHtml(task.project)}</button>` : ''}
       ${task.dueDate ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : '📅 '}${task.dueDate}</span>` : ''}
       ${task.screenshots?.length ? `<span class="task-shots">🖼️ ${task.screenshots.length}</span>` : ''}
+      ${assignee ? `<span class="assignee-chip"><span class="assignee-chip-avatar">${escapeHtml(assignee.name[0] || '?').toUpperCase()}</span>${escapeHtml(assignee.name)}</span>` : ''}
     </div>
     ${labels.length ? `<div class="task-labels">${labels.map((l) => `<span class="label-chip">${escapeHtml(l)}</span>`).join('')}</div>` : ''}
+    ${escalation ? `<div class="escalation ${escalation.cls}">${escalation.text}</div>` : ''}
   `;
 
   card.addEventListener('click', () => openTaskModal(task));
@@ -246,10 +317,12 @@ function renderSidebar() {
   } else {
     list.innerHTML = attention.map((t) => {
       const overdue = t.dueDate && t.dueDate < today;
+      const escalation = computeEscalation(t);
       return `
         <div class="attention-item ${t.urgency} ${overdue ? 'overdue' : ''}" data-id="${t.id}">
           <div class="attention-item-title">${escapeHtml(t.title)}</div>
           <span class="muted">${t.dueDate ? (overdue ? '⚠️ ' + t.dueDate : t.dueDate) : urgencyLabel[t.urgency]}${t.project ? ' · ' + escapeHtml(t.project) : ''}</span>
+          ${escalation ? `<div class="escalation ${escalation.cls}">${escalation.text}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -503,6 +576,135 @@ function addLabelFromInput() {
 }
 
 // ---------------------------------------------------------------------
+// Équipe (membres assignables aux tâches)
+// ---------------------------------------------------------------------
+function openTeamModal() {
+  resetMemberForm();
+  renderMemberList();
+  $('#team-modal').classList.remove('hidden');
+}
+
+function closeTeamModal() {
+  $('#team-modal').classList.add('hidden');
+}
+
+function resetMemberForm() {
+  state.editingMemberId = null;
+  $('#member-id').value = '';
+  $('#member-name').value = '';
+  $('#member-badge').value = '';
+  $('#member-discord-id').value = '';
+  $('#member-always-notify').checked = false;
+  $('#member-save-btn').textContent = 'Ajouter le membre';
+  $('#member-cancel-btn').classList.add('hidden');
+}
+
+function renderMemberList() {
+  const el = $('#member-list');
+  if (!el) return;
+  if (state.members.length === 0) {
+    el.innerHTML = '<p class="member-empty">Aucun membre pour l\'instant — ajoute ton équipe ci-dessus.</p>';
+    return;
+  }
+  el.innerHTML = state.members.map((m) => `
+    <div class="member-row" data-id="${m.id}">
+      <div class="member-row-info">
+        <span class="member-avatar">${escapeHtml((m.name[0] || '?').toUpperCase())}</span>
+        <div>
+          <div class="member-row-name">
+            ${escapeHtml(m.name)}
+            ${m.badge ? `<span class="badge-pill">${escapeHtml(m.badge)}</span>` : ''}
+            ${m.alwaysNotify ? `<span class="badge-pill badge-chief">🔔 Toujours notifié</span>` : ''}
+          </div>
+          <div class="member-row-discord muted">${m.discordId ? 'ID Discord : ' + escapeHtml(m.discordId) : 'Pas d\'ID Discord renseigné'}</div>
+        </div>
+      </div>
+      <div class="member-row-actions">
+        <button type="button" class="btn btn-icon member-edit-btn" data-id="${m.id}">✏️</button>
+        <button type="button" class="btn btn-icon member-delete-btn" data-id="${m.id}">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.member-edit-btn').forEach((btn) => {
+    btn.addEventListener('click', () => startEditMember(btn.dataset.id));
+  });
+  el.querySelectorAll('.member-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', () => handleMemberDelete(btn.dataset.id));
+  });
+}
+
+function startEditMember(id) {
+  const member = state.members.find((m) => m.id === id);
+  if (!member) return;
+  state.editingMemberId = id;
+  $('#member-id').value = member.id;
+  $('#member-name').value = member.name;
+  $('#member-badge').value = member.badge || '';
+  $('#member-discord-id').value = member.discordId || '';
+  $('#member-always-notify').checked = !!member.alwaysNotify;
+  $('#member-save-btn').textContent = 'Enregistrer les modifications';
+  $('#member-cancel-btn').classList.remove('hidden');
+  $('#member-name').focus();
+}
+
+async function handleMemberSubmit(e) {
+  e.preventDefault();
+  const name = $('#member-name').value.trim();
+  if (!name) return;
+  const member = {
+    id: state.editingMemberId || crypto.randomUUID(),
+    name,
+    badge: $('#member-badge').value.trim(),
+    discordId: $('#member-discord-id').value.trim(),
+    alwaysNotify: $('#member-always-notify').checked,
+  };
+  const existingIndex = state.members.findIndex((m) => m.id === member.id);
+  if (existingIndex >= 0) {
+    state.members[existingIndex] = member;
+  } else {
+    state.members.push(member);
+  }
+  resetMemberForm();
+  renderMemberList();
+  populateAssigneeSelects();
+  renderAssigneeFilter();
+  renderBoard();
+  try {
+    await saveMembers(existingIndex >= 0 ? `Modifier le membre "${name}"` : `Ajouter le membre "${name}"`);
+  } catch { /* déjà notifié dans saveMembers */ }
+}
+
+async function handleMemberDelete(id) {
+  const member = state.members.find((m) => m.id === id);
+  if (!confirm(`Retirer ${member?.name || 'ce membre'} de l'équipe ? Les tâches qui lui sont assignées deviendront "Non assigné".`)) return;
+  state.members = state.members.filter((m) => m.id !== id);
+  for (const t of state.tasks) {
+    if (t.assigneeId === id) t.assigneeId = null;
+  }
+  if (state.editingMemberId === id) resetMemberForm();
+  renderMemberList();
+  populateAssigneeSelects();
+  renderAssigneeFilter();
+  renderBoard();
+  try {
+    await saveMembers(`Retirer le membre "${member?.name || id}"`);
+    await saveTasks(`Désassigner les tâches de "${member?.name || id}"`);
+  } catch { /* déjà notifié */ }
+}
+
+function populateAssigneeSelects() {
+  const taskSelect = $('#task-assignee');
+  if (taskSelect) {
+    const current = taskSelect.value;
+    taskSelect.innerHTML = '<option value="">Non assigné</option>' +
+      state.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}${m.badge ? ' — ' + escapeHtml(m.badge) : ''}</option>`).join('');
+    taskSelect.value = state.members.some((m) => m.id === current) ? current : '';
+    taskSelect._customSelectRefresh?.();
+  }
+}
+
+// ---------------------------------------------------------------------
 // Modale tâche
 // ---------------------------------------------------------------------
 function openTaskModal(task) {
@@ -516,8 +718,11 @@ function openTaskModal(task) {
   $('#task-status').value = task?.status || 'todo';
   $('#task-due').value = task?.dueDate || '';
   $('#task-reminder').value = task?.reminderDate || '';
+  populateAssigneeSelects();
+  $('#task-assignee').value = task?.assigneeId || '';
   $('#task-urgency')._customSelectRefresh?.();
   $('#task-status')._customSelectRefresh?.();
+  $('#task-assignee')._customSelectRefresh?.();
   $('#task-delete-btn').classList.toggle('hidden', isNew);
   $('#task-error').classList.add('hidden');
   $('#task-screenshots-input').value = '';
@@ -584,6 +789,7 @@ async function handleTaskSubmit(e) {
     description: $('#task-description').value.trim(),
     urgency: $('#task-urgency').value,
     status: $('#task-status').value,
+    assigneeId: $('#task-assignee').value || null,
     dueDate: $('#task-due').value || null,
     reminderDate: $('#task-reminder').value || null,
     screenshots: [...state.editingScreenshots],
@@ -665,6 +871,7 @@ function handleSettingsSubmit(e) {
   $('#settings-modal').classList.add('hidden');
   loadTasks();
   loadIdeas();
+  loadMembers();
 }
 
 // ---------------------------------------------------------------------
@@ -675,8 +882,10 @@ function bindGlobalEvents() {
   bindDropdownOutsideClick();
   bindProjectAutocomplete();
   enhanceSelect($('#project-filter'), 'select-narrow');
+  enhanceSelect($('#assignee-filter'), 'select-narrow');
   enhanceSelect($('#task-urgency'));
   enhanceSelect($('#task-status'));
+  enhanceSelect($('#task-assignee'));
 
   $('#new-task-btn').addEventListener('click', () => openTaskModal(null));
   $('#task-modal-close').addEventListener('click', closeTaskModal);
@@ -715,6 +924,11 @@ function bindGlobalEvents() {
     }
   });
 
+  $('#team-btn').addEventListener('click', openTeamModal);
+  $('#team-modal-close').addEventListener('click', closeTeamModal);
+  $('#member-form').addEventListener('submit', handleMemberSubmit);
+  $('#member-cancel-btn').addEventListener('click', resetMemberForm);
+
   $('#settings-btn').addEventListener('click', () => openSettingsModal(false));
   $('#settings-modal-close').addEventListener('click', closeSettingsModal);
   $('#settings-form').addEventListener('submit', handleSettingsSubmit);
@@ -725,6 +939,10 @@ function bindGlobalEvents() {
   });
   $('#project-filter').addEventListener('change', (e) => {
     state.filters.project = e.target.value;
+    renderBoard();
+  });
+  $('#assignee-filter').addEventListener('change', (e) => {
+    state.filters.assignee = e.target.value;
     renderBoard();
   });
   document.querySelectorAll('#urgency-filters .chip').forEach((chip) => {
@@ -742,6 +960,7 @@ function bindGlobalEvents() {
         if (overlay.id === 'task-modal') closeTaskModal();
         if (overlay.id === 'settings-modal') closeSettingsModal();
         if (overlay.id === 'idea-modal') closeIdeaModal();
+        if (overlay.id === 'team-modal') closeTeamModal();
       }
     });
   });

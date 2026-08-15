@@ -53,6 +53,7 @@
         <input type="search" id="search-input" class="search-input" placeholder="Rechercher une tâche…" />
       </div>
       <select id="project-filter" class="select"><option value="">Tous les projets</option></select>
+      <select id="assignee-filter" class="select"><option value="">Tous les membres</option></select>
       <div class="urgency-filters" id="urgency-filters">
         <button class="chip chip-urgent" data-urgency="urgent">🔴 Urgent</button>
         <button class="chip chip-moyen" data-urgency="moyen">🟡 Moyen</button>
@@ -62,6 +63,7 @@
       <span id="sync-status" class="sync-status"></span>
       <button id="discord-now-btn" class="btn btn-discord" title="Envoyer le résumé Discord tout de suite">📨 Envoyer sur Discord</button>
       <button id="new-task-btn" class="btn btn-primary">+ Nouvelle tâche</button>
+      <button id="team-btn" class="btn btn-icon" title="Équipe">👥</button>
       <button id="settings-btn" class="btn btn-icon" title="Paramètres">⚙️</button>
     </header>
 
@@ -109,6 +111,11 @@
             <option value="urgent">🔴 Urgent</option>
             <option value="moyen" selected>🟡 Moyen</option>
             <option value="faible">🟢 Faible</option>
+          </select>
+        </label>
+        <label>Assigné à
+          <select id="task-assignee">
+            <option value="">Non assigné</option>
           </select>
         </label>
       </div>
@@ -175,6 +182,44 @@
         <button type="submit" class="btn btn-primary">Ajouter</button>
       </form>
       <div id="idea-grid" class="idea-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modale équipe -->
+<div id="team-modal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2>👥 Équipe</h2>
+      <button class="btn-close" id="team-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="member-form" class="member-form">
+        <input type="hidden" id="member-id" />
+        <div class="form-row">
+          <label>Nom
+            <input type="text" id="member-name" placeholder="Ex: Jean" required />
+          </label>
+          <label>Rôle / badge
+            <input type="text" id="member-badge" placeholder="Ex: Mappeur" />
+          </label>
+        </div>
+        <label>ID Discord (pour le @)
+          <input type="text" id="member-discord-id" placeholder="Ex: 123456789012345678" />
+        </label>
+        <p class="hint">Dans Discord, active le mode développeur (Paramètres → Avancés), puis clic droit sur son pseudo → Copier l'ID.</p>
+        <label class="checkbox-label">
+          <input type="checkbox" id="member-always-notify" />
+          Me notifier à chaque message Discord, même si rien ne m'est assigné (à cocher pour toi, le chef)
+        </label>
+        <div class="modal-footer">
+          <button type="button" id="member-cancel-btn" class="btn hidden">Annuler la modification</button>
+          <div class="modal-footer-right">
+            <button type="submit" class="btn btn-primary" id="member-save-btn">Ajouter le membre</button>
+          </div>
+        </div>
+      </form>
+      <div id="member-list" class="member-list"></div>
     </div>
   </div>
 </div>

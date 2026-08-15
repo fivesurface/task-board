@@ -15,6 +15,21 @@ function parisNow() {
   return { date: `${get('year')}-${get('month')}-${get('day')}`, hour: Number(get('hour')) };
 }
 
+function daysBetween(dateStr, todayIso) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const t = new Date(todayIso + 'T00:00:00Z');
+  return Math.round((t - d) / 86400000);
+}
+
+async function readJson(relativePath, fallback) {
+  try {
+    const raw = await readFile(new URL(relativePath, import.meta.url), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 const { date: today, hour } = parisNow();
 const eventName = process.env.GITHUB_EVENT_NAME || '';
 
@@ -32,8 +47,9 @@ if (!webhookUrl) {
   process.exit(1);
 }
 
-const raw = await readFile(new URL('../../data/tasks.json', import.meta.url), 'utf-8');
-const { tasks = [] } = JSON.parse(raw);
+const { tasks = [] } = await readJson('../../data/tasks.json', { tasks: [] });
+const { members = [] } = await readJson('../../data/members.json', { members: [] });
+const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
 
 const due = tasks.filter((t) => {
   if (t.status === 'done') return false;
@@ -45,21 +61,41 @@ const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 const urgencyLabel = { urgent: '🔴 Urgent', moyen: '🟡 Moyen', faible: '🟢 Faible' };
 due.sort((a, b) => (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9));
 
+// Ceux qui doivent être notifiés : toujours ceux marqués "alwaysNotify" (le/les chef(s)),
+// plus l'assigné de chaque tâche du jour. Les vraies notifications Discord ne se
+// déclenchent que sur les mentions placées dans "content", pas dans un embed.
+const mentionIds = new Set();
+for (const m of members) if (m.alwaysNotify && m.discordId) mentionIds.add(m.discordId);
+
 let description;
 if (due.length === 0) {
   description = "Rien de prévu aujourd'hui. 🎉";
 } else {
   description = due
     .map((t) => {
-      const overdue = t.dueDate && t.dueDate < today ? ' ⚠️ *en retard*' : '';
+      let escalation = '';
+      if (t.dueDate) {
+        const overdueDays = daysBetween(t.dueDate, today);
+        if (overdueDays >= 3) escalation = ` 🔥 **en retard depuis ${overdueDays} j**`;
+        else if (overdueDays >= 1) escalation = ` ⚠️ *en retard depuis ${overdueDays} j*`;
+      } else if (t.createdAt) {
+        const openDays = Math.floor((Date.now() - new Date(t.createdAt).getTime()) / 86400000);
+        if (openDays >= 5) escalation = ` ⏳ *en attente depuis ${openDays} j*`;
+      }
       const project = t.project ? ` _(${t.project})_` : '';
-      return `**${urgencyLabel[t.urgency] || t.urgency}** — ${t.title}${project}${overdue}`;
+      const assigneeMember = t.assigneeId ? memberById[t.assigneeId] : null;
+      const assignee = assigneeMember ? ` · 👤 ${assigneeMember.name}` : '';
+      if (assigneeMember?.discordId) mentionIds.add(assigneeMember.discordId);
+      return `**${urgencyLabel[t.urgency] || t.urgency}** — ${t.title}${project}${assignee}${escalation}`;
     })
     .join('\n');
 }
 
+const mentionLine = mentionIds.size ? [...mentionIds].map((id) => `<@${id}>`).join(' ') : undefined;
+
 const payload = {
   username: 'Tableau de bord',
+  content: mentionLine,
   embeds: [
     {
       title: `📋 À faire aujourd'hui — ${today}`,
@@ -81,4 +117,4 @@ if (!res.ok) {
   process.exit(1);
 }
 
-console.log(`Message envoyé avec ${due.length} tâche(s).`);
+console.log(`Message envoyé avec ${due.length} tâche(s), ${mentionIds.size} mention(s).`);
