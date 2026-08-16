@@ -60,35 +60,18 @@ const siteUrl = repoOwner && repoName ? `https://${repoOwner}.github.io/${repoNa
 const remaining = tasks.filter((t) => t.status !== 'done');
 
 const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
-const urgencyGroups = [
-  { key: 'urgent', label: '🔴 Urgent' },
-  { key: 'moyen', label: '🟡 Moyen' },
-  { key: 'faible', label: '🟢 Faible' },
-];
-
-// L'échéance est une date limite : on classe d'abord par échéance la plus
-// proche (une tâche en retard remonte naturellement en premier), l'urgence
-// ne départageant que les tâches à échéance égale ou sans échéance.
-remaining.sort((a, b) => {
-  const aDate = a.dueDate || null;
-  const bDate = b.dueDate || null;
-  if (aDate && bDate && aDate !== bDate) return aDate.localeCompare(bDate);
-  if (aDate && !bDate) return -1;
-  if (!aDate && bDate) return 1;
-  return (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
-});
+const urgencyDot = { urgent: '🔴', moyen: '🟡', faible: '🟢' };
 
 function formatTaskLine(t) {
   let escalation = '';
   if (t.dueDate) {
     const overdueDays = daysBetween(t.dueDate, today);
-    if (overdueDays >= 3) escalation = ` 🔥 **en retard depuis ${overdueDays} j**`;
-    else if (overdueDays >= 1) escalation = ` ⚠️ *en retard depuis ${overdueDays} j*`;
+    if (overdueDays >= 3) escalation = ' 🔥 **en retard**';
+    else if (overdueDays >= 1) escalation = ' ⚠️ *en retard*';
   } else if (t.createdAt) {
     const openDays = Math.floor((Date.now() - new Date(t.createdAt).getTime()) / 86400000);
     if (openDays >= 5) escalation = ` ⏳ *en attente depuis ${openDays} j*`;
   }
-  const dateLabel = t.dueDate ? ` · 📅 ${t.dueDate}` : ' · _sans échéance_';
   const project = t.project ? ` _(${t.project})_` : '';
   const assigneeMember = t.assigneeId ? memberById[t.assigneeId] : null;
   const assigneeTag = assigneeMember
@@ -96,20 +79,45 @@ function formatTaskLine(t) {
     : null;
   const assignee = assigneeTag ? ` · 👤 ${assigneeTag}` : '';
   const titleText = siteUrl ? `[${t.title}](${siteUrl}/#/task/${t.id})` : t.title;
-  return `• ${titleText}${dateLabel}${project}${assignee}${escalation}`;
+  return `${urgencyDot[t.urgency] || '⚪'} ${titleText}${project}${assignee}${escalation}`;
 }
 
-// Un champ d'embed par urgence : ça donne une mise en page en blocs bien
-// nets dans Discord, plutôt qu'un seul long paragraphe.
-const fields = urgencyGroups
-  .map((g) => {
-    const items = remaining.filter((t) => t.urgency === g.key);
-    if (items.length === 0) return null;
-    let value = items.map(formatTaskLine).join('\n');
-    if (value.length > 1024) value = value.slice(0, 1000) + '\n… (liste tronquée)';
-    return { name: `${g.label} (${items.length})`, value, inline: false };
-  })
-  .filter(Boolean);
+function formatDateHeader(dateStr) {
+  const label = new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const capped = label.charAt(0).toUpperCase() + label.slice(1);
+  if (dateStr === today) return `📍 Aujourd'hui — ${capped}`;
+  if (dateStr < today) return `⏰ En retard — ${capped}`;
+  return capped;
+}
+
+// Vue façon agenda : un groupe par date (triées chronologiquement), plutôt
+// que par urgence — on voit d'un coup d'œil ce qui tombe quand.
+const byDate = new Map();
+const withoutDate = [];
+for (const t of remaining) {
+  if (!t.dueDate) { withoutDate.push(t); continue; }
+  if (!byDate.has(t.dueDate)) byDate.set(t.dueDate, []);
+  byDate.get(t.dueDate).push(t);
+}
+const sortedDates = [...byDate.keys()].sort();
+const sortByUrgency = (a, b) => (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
+
+const fields = sortedDates.map((dateStr) => {
+  const items = byDate.get(dateStr).sort(sortByUrgency);
+  let value = items.map(formatTaskLine).join('\n');
+  if (value.length > 1024) value = value.slice(0, 1000) + '\n… (liste tronquée)';
+  return { name: formatDateHeader(dateStr), value, inline: false };
+});
+
+if (withoutDate.length) {
+  let value = withoutDate.sort(sortByUrgency).map(formatTaskLine).join('\n');
+  if (value.length > 1024) value = value.slice(0, 1000) + '\n… (liste tronquée)';
+  fields.push({ name: '🔹 Sans échéance', value, inline: false });
+}
 
 const payload = {
   username: 'Tableau de bord',
@@ -117,7 +125,7 @@ const payload = {
     {
       title: `📋 Tableau de bord — ${today}`,
       description: remaining.length
-        ? `${remaining.length} tâche(s) restante(s), triées par échéance la plus proche.`
+        ? `${remaining.length} tâche(s) restante(s), classées par jour.`
         : 'Rien à faire actuellement. 🎉',
       fields,
       color: remaining.length > 0 ? 0xf85149 : 0x3fb950,
