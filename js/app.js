@@ -1176,7 +1176,6 @@ function showTaskView(task) {
 
   $('#task-view-meta').innerHTML = `
     ${task.dueDate ? `<span>${icon('calendar')}<strong>Échéance</strong> · ${task.dueDate}${overdue ? ' ' + icon('alert-triangle') : ''}</span>` : ''}
-    ${task.reminderDate ? `<span>${icon('send')}<strong>Rappel Discord</strong> · ${task.reminderDate}</span>` : ''}
     <span>${icon('calendar')}<strong>Créée le</strong> · ${new Date(task.createdAt).toLocaleDateString('fr-FR')}</span>
     ${task.updatedAt && task.updatedAt !== task.createdAt ? `<span>${icon('edit')}<strong>Modifiée</strong> · ${timeAgo(task.updatedAt)}</span>` : ''}
   `;
@@ -1204,7 +1203,6 @@ function showTaskEdit(task) {
   $('#task-urgency').value = task?.urgency || 'moyen';
   $('#task-status').value = task?.status || 'todo';
   $('#task-due').value = task?.dueDate || '';
-  $('#task-reminder').value = task?.reminderDate || '';
   populateAssigneeSelects();
   $('#task-assignee').value = task?.assigneeId || '';
   $('#task-urgency')._customSelectRefresh?.();
@@ -1386,7 +1384,6 @@ async function handleTaskSubmit(e) {
     status: $('#task-status').value,
     assigneeId: $('#task-assignee').value || null,
     dueDate: $('#task-due').value || null,
-    reminderDate: $('#task-reminder').value || null,
     screenshots: [...state.editingScreenshots],
     createdAt: existing?.createdAt || now,
     updatedAt: now,

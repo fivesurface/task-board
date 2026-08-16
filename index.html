@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=8" />
+<link rel="stylesheet" href="css/style.css?v=9" />
 </head>
 <body>
 
@@ -211,9 +211,6 @@
         <label>Échéance
           <input type="date" id="task-due" />
         </label>
-        <label>Rappel Discord
-          <input type="date" id="task-reminder" />
-        </label>
       </div>
 
       <label>Étiquettes
@@ -238,7 +235,7 @@
           <div id="task-screenshots-list" class="screenshots-list"></div>
         </div>
       </div>
-      <p class="hint">La date de rappel détermine quand cette tâche apparaîtra dans le message Discord du matin (par défaut : la date d'échéance). L'aperçu d'une capture peut mettre quelques secondes à apparaître le temps que GitHub la propage.</p>
+      <p class="hint">Le message Discord du matin liste toutes les tâches non terminées, triées par échéance la plus proche. L'aperçu d'une capture peut mettre quelques secondes à apparaître le temps que GitHub la propage.</p>
 
       <div class="modal-footer">
         <button type="button" id="task-delete-btn" class="btn btn-danger hidden"><span class="icon" data-icon="trash"></span>Supprimer</button>
@@ -395,6 +392,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=8"></script>
+<script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>
