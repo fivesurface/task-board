@@ -78,8 +78,9 @@ function formatTaskLine(t) {
     ? (assigneeMember.discordId ? `<@${assigneeMember.discordId}>` : assigneeMember.name)
     : null;
   const assignee = assigneeTag ? ` · 👤 ${assigneeTag}` : '';
+  const statusTag = t.status === 'doing' ? ' · 🔧 `En cours`' : '';
   const titleText = siteUrl ? `[${t.title}](${siteUrl}/#/task/${t.id})` : t.title;
-  return `${urgencyDot[t.urgency] || '⚪'} ${titleText}${project}${assignee}${escalation}`;
+  return `${urgencyDot[t.urgency] || '⚪'} ${titleText}${statusTag}${project}${assignee}${escalation}`;
 }
 
 function formatDateHeader(dateStr) {
