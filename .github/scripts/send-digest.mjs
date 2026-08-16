@@ -63,7 +63,18 @@ const due = tasks.filter((t) => {
 
 const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 const urgencyLabel = { urgent: '🔴 Urgent', moyen: '🟡 Moyen', faible: '🟢 Faible' };
-due.sort((a, b) => (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9));
+
+// L'échéance est une date limite : on classe d'abord par échéance la plus
+// proche (une tâche en retard remonte naturellement en premier), l'urgence
+// ne départageant que les tâches à échéance égale ou sans échéance.
+due.sort((a, b) => {
+  const aDate = a.dueDate || null;
+  const bDate = b.dueDate || null;
+  if (aDate && bDate && aDate !== bDate) return aDate.localeCompare(bDate);
+  if (aDate && !bDate) return -1;
+  if (!aDate && bDate) return 1;
+  return (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
+});
 
 let description;
 if (due.length === 0) {

@@ -44,6 +44,19 @@ const $ = (sel) => document.querySelector(sel);
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const urgencyOrder = { urgent: 0, moyen: 1, faible: 2 };
 
+// Tri partagé : l'échéance est une date limite ("au plus tard le..."), donc
+// on classe d'abord par échéance la plus proche (une tâche en retard ou due
+// aujourd'hui remonte naturellement en premier), l'urgence ne départageant
+// que les tâches à échéance égale ou sans échéance.
+function compareTasksByPriority(a, b) {
+  const aDate = a.dueDate || null;
+  const bDate = b.dueDate || null;
+  if (aDate && bDate && aDate !== bDate) return aDate.localeCompare(bDate);
+  if (aDate && !bDate) return -1;
+  if (!aDate && bDate) return 1;
+  return (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
+}
+
 // ---------------------------------------------------------------------
 // Verrou léger
 // ---------------------------------------------------------------------
@@ -361,7 +374,7 @@ function renderBoard() {
   const filtered = getFilteredTasks();
   for (const status of ['todo', 'doing', 'done']) {
     const list = $(`.card-list[data-status="${status}"]`);
-    const tasks = filtered.filter((t) => t.status === status);
+    const tasks = filtered.filter((t) => t.status === status).sort(compareTasksByPriority);
     $(`#count-${status}`).textContent = tasks.length;
     list.innerHTML = '';
     for (const task of tasks) list.appendChild(renderCard(task));
@@ -462,15 +475,9 @@ function renderSidebar() {
     </div>
   `;
 
-  // Toutes les tâches restantes, triées par urgence puis par échéance
-  // (les plus urgentes / les plus proches en premier).
-  const attention = remaining
-    .slice()
-    .sort((a, b) => {
-      const rankDiff = (urgencyOrder[a.urgency] ?? 9) - (urgencyOrder[b.urgency] ?? 9);
-      if (rankDiff !== 0) return rankDiff;
-      return (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
-    });
+  // Toutes les tâches restantes, triées par échéance la plus proche puis
+  // par urgence (voir compareTasksByPriority).
+  const attention = remaining.slice().sort(compareTasksByPriority);
 
   const list = $('#attention-list');
   if (attention.length === 0) {
@@ -1556,6 +1563,32 @@ function bindGlobalEvents() {
       e.preventDefault();
       $('#search-input').focus();
       $('#search-input').select();
+    }
+  });
+
+  // Coller une image (Ctrl/Cmd+V) directement dans la zone d'upload active,
+  // selon la fenêtre actuellement ouverte.
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [...items]
+      .filter((it) => it.type.startsWith('image/'))
+      .map((it) => it.getAsFile())
+      .filter(Boolean);
+    if (!imageFiles.length) return;
+
+    if (!$('#task-modal').classList.contains('hidden') && !$('#task-form').classList.contains('hidden')) {
+      e.preventDefault();
+      handleScreenshotUpload(imageFiles);
+    } else if (!$('#idea-detail-modal').classList.contains('hidden')) {
+      e.preventDefault();
+      handleIdeaDetailImageUpload(imageFiles);
+    } else if (!$('#idea-page').classList.contains('hidden')) {
+      e.preventDefault();
+      handleIdeaImageUpload(imageFiles);
+    } else if (!$('#appearance-modal').classList.contains('hidden')) {
+      e.preventDefault();
+      handleAppearanceImageUpload(imageFiles);
     }
   });
 

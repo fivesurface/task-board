@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=7" />
+<link rel="stylesheet" href="css/style.css?v=8" />
 </head>
 <body>
 
@@ -112,7 +112,7 @@
         <textarea id="idea-input" rows="2" placeholder="Note une idée et appuie sur Entrée…"></textarea>
         <div class="dropzone dropzone-compact" id="idea-dropzone">
           <span class="dropzone-icon" data-icon="image"></span>
-          <span>Glisse une image ici, ou clique</span>
+          <span>Glisse ou colle (Ctrl+V)</span>
           <input type="file" id="idea-image-input" accept="image/*" multiple hidden />
         </div>
         <div id="idea-composer-images" class="screenshots-list"></div>
@@ -232,7 +232,7 @@
           <label>Captures d'écran</label>
           <div class="dropzone" id="screenshot-dropzone">
             <span class="dropzone-icon" data-icon="image"></span>
-            <span>Glisse une image ici, ou clique pour choisir</span>
+            <span>Glisse, colle (Ctrl+V) ou clique pour choisir une image</span>
             <input type="file" id="task-screenshots-input" accept="image/*" multiple hidden />
           </div>
           <div id="task-screenshots-list" class="screenshots-list"></div>
@@ -267,7 +267,7 @@
       <label>Images</label>
       <div class="dropzone dropzone-compact" id="idea-detail-dropzone">
         <span class="dropzone-icon" data-icon="image"></span>
-        <span>Glisse une image ici, ou clique</span>
+        <span>Glisse ou colle (Ctrl+V)</span>
         <input type="file" id="idea-detail-image-input" accept="image/*" multiple hidden />
       </div>
       <div id="idea-detail-images" class="screenshots-list"></div>
@@ -351,7 +351,7 @@
       <label>Image d'arrière-plan (optionnel)</label>
       <div class="dropzone" id="appearance-dropzone">
         <span class="dropzone-icon" data-icon="image"></span>
-        <span>Glisse une image ici, ou clique pour choisir</span>
+        <span>Glisse, colle (Ctrl+V) ou clique pour choisir une image</span>
         <input type="file" id="appearance-image-input" accept="image/*" hidden />
       </div>
       <div id="appearance-image-preview"></div>
@@ -395,6 +395,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=7"></script>
+<script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>
