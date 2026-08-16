@@ -1551,6 +1551,14 @@ function bindGlobalEvents() {
   $('#stats-page-back').addEventListener('click', () => { location.hash = ''; });
   window.addEventListener('hashchange', handleRoute);
 
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      $('#search-input').focus();
+      $('#search-input').select();
+    }
+  });
+
   $('#notif-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     $('#notif-panel').classList.toggle('hidden');
