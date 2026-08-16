@@ -119,7 +119,9 @@
       "labels": [
         "Merge By distant",
         "separate decal",
-        "split"
+        "split",
+        "arrondie rebord",
+        "uv bas"
       ],
       "description": "bien tout mettre caré niveua vertice etc",
       "urgency": "moyen",
@@ -129,7 +131,7 @@
       "reminderDate": null,
       "screenshots": [],
       "createdAt": "2026-08-16T16:45:44.945Z",
-      "updatedAt": "2026-08-16T21:00:00.943Z"
+      "updatedAt": "2026-08-16T21:12:50.104Z"
     }
   ]
 }
