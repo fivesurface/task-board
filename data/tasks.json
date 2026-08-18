@@ -99,7 +99,8 @@
       "project": "Cooper Hills",
       "labels": [
         "bouche degout",
-        "partie herbe troitoir"
+        "partie herbe troitoir",
+        "detaille road"
       ],
       "description": "",
       "urgency": "moyen",
@@ -109,7 +110,7 @@
       "reminderDate": null,
       "screenshots": [],
       "createdAt": "2026-08-15T16:32:14.128Z",
-      "updatedAt": "2026-08-18T20:12:45.886Z"
+      "updatedAt": "2026-08-18T20:13:07.134Z"
     },
     {
       "id": "74f4af1a-d7a2-4ea9-93fe-27d5dabead40",
