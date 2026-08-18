@@ -148,6 +148,20 @@
       "screenshots": [],
       "createdAt": "2026-08-18T13:06:56.422Z",
       "updatedAt": "2026-08-18T13:06:56.422Z"
+    },
+    {
+      "id": "d0754c0e-7b64-43b5-992d-2443c12a136c",
+      "title": "Mettre les entré parking",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "varie avec els entré",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-08-20",
+      "screenshots": [],
+      "createdAt": "2026-08-18T13:07:28.581Z",
+      "updatedAt": "2026-08-18T13:07:28.581Z"
     }
   ]
 }
