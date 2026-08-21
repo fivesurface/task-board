@@ -112,6 +112,24 @@
       "screenshots": [],
       "createdAt": "2026-08-18T13:07:28.581Z",
       "updatedAt": "2026-08-19T20:45:18.334Z"
+    },
+    {
+      "id": "fb805653-dbc2-41b5-a509-f5efda2a2694",
+      "title": "Coriiger les beug texture",
+      "project": "Cooper Hills",
+      "labels": [
+        "UV road",
+        "Split",
+        "Herbe"
+      ],
+      "description": "",
+      "urgency": "urgent",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-08-22",
+      "screenshots": [],
+      "createdAt": "2026-08-21T10:59:34.144Z",
+      "updatedAt": "2026-08-21T10:59:34.144Z"
     }
   ]
 }
