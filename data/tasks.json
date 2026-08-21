@@ -164,6 +164,23 @@
       "screenshots": [],
       "createdAt": "2026-08-21T11:00:27.520Z",
       "updatedAt": "2026-08-21T11:00:30.601Z"
+    },
+    {
+      "id": "a1b48585-9ce4-43d4-a94c-9b340aca3055",
+      "title": "Marqauge sol",
+      "project": "Cooper Hills",
+      "labels": [
+        "marquage bien styler",
+        "sgignalisation"
+      ],
+      "description": "",
+      "urgency": "urgent",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-08-22",
+      "screenshots": [],
+      "createdAt": "2026-08-21T11:01:12.567Z",
+      "updatedAt": "2026-08-21T11:01:12.567Z"
     }
   ]
 }
