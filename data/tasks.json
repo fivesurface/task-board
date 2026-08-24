@@ -173,12 +173,12 @@
       ],
       "description": "",
       "urgency": "urgent",
-      "status": "todo",
+      "status": "doing",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": "2026-08-24",
       "screenshots": [],
       "createdAt": "2026-08-21T11:01:23.863Z",
-      "updatedAt": "2026-08-21T11:28:15.193Z"
+      "updatedAt": "2026-08-24T13:24:32.771Z"
     },
     {
       "id": "3ae4fcee-0b9e-497c-8452-2645e1e8acbd",
