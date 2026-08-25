@@ -51,13 +51,13 @@
       ],
       "description": "Faire le système de devis personalisé et automaiquete",
       "urgency": "faible",
-      "status": "todo",
+      "status": "done",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": "2026-08-22",
       "reminderDate": null,
       "screenshots": [],
       "createdAt": "2026-08-15T14:49:21.044Z",
-      "updatedAt": "2026-08-15T14:49:21.044Z"
+      "updatedAt": "2026-08-25T13:10:00.113Z"
     },
     {
       "id": "74f4af1a-d7a2-4ea9-93fe-27d5dabead40",
