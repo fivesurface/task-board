@@ -122,12 +122,12 @@
       ],
       "description": "",
       "urgency": "urgent",
-      "status": "todo",
+      "status": "done",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": "2026-08-23",
       "screenshots": [],
       "createdAt": "2026-08-21T10:59:58.991Z",
-      "updatedAt": "2026-08-21T11:28:10.721Z"
+      "updatedAt": "2026-08-25T13:09:35.313Z"
     },
     {
       "id": "23e4968d-39fc-4d1d-8190-a0a910a383cc",
