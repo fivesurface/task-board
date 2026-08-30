@@ -277,6 +277,20 @@
       "screenshots": [],
       "createdAt": "2026-08-30T17:34:58.539Z",
       "updatedAt": "2026-08-30T17:34:58.539Z"
+    },
+    {
+      "id": "dc53603e-6a34-4768-b466-045d5dd50498",
+      "title": "Faire le terrain un peu",
+      "project": "",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": null,
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-08-30T17:35:08.680Z",
+      "updatedAt": "2026-08-30T17:35:08.680Z"
     }
   ]
 }
