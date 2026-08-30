@@ -291,6 +291,22 @@
       "screenshots": [],
       "createdAt": "2026-08-30T17:35:08.680Z",
       "updatedAt": "2026-08-30T17:35:33.362Z"
+    },
+    {
+      "id": "72edb7b4-f52c-4af5-acc2-c4437922ddff",
+      "title": "Faire la signalisation",
+      "project": "Cooper Hills",
+      "labels": [
+        "4h"
+      ],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-09-02",
+      "screenshots": [],
+      "createdAt": "2026-08-30T17:36:21.061Z",
+      "updatedAt": "2026-08-30T17:36:21.061Z"
     }
   ]
 }
