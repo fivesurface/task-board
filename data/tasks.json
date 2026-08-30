@@ -245,6 +245,22 @@
       "screenshots": [],
       "createdAt": "2026-08-21T11:05:15.827Z",
       "updatedAt": "2026-08-25T13:09:42.881Z"
+    },
+    {
+      "id": "03cbb25d-9743-4625-b555-9262cad36aa2",
+      "title": "Refaire tout les UV road",
+      "project": "Cooper Hills",
+      "labels": [
+        "6h min"
+      ],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-09-06",
+      "screenshots": [],
+      "createdAt": "2026-08-30T17:34:29.830Z",
+      "updatedAt": "2026-08-30T17:34:29.830Z"
     }
   ]
 }
