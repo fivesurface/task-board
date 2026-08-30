@@ -261,6 +261,22 @@
       "screenshots": [],
       "createdAt": "2026-08-30T17:34:29.830Z",
       "updatedAt": "2026-08-30T17:34:29.830Z"
+    },
+    {
+      "id": "66dd0ade-b572-492f-ad86-993fe59cadba",
+      "title": "Refaire les poteau electrique que j'avais supprimer",
+      "project": "Cooper Hills",
+      "labels": [
+        "vite fait 2h"
+      ],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-09-06",
+      "screenshots": [],
+      "createdAt": "2026-08-30T17:34:58.539Z",
+      "updatedAt": "2026-08-30T17:34:58.539Z"
     }
   ]
 }
