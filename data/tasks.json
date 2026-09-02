@@ -307,6 +307,20 @@
       "screenshots": [],
       "createdAt": "2026-08-30T17:36:21.061Z",
       "updatedAt": "2026-09-02T17:14:17.204Z"
+    },
+    {
+      "id": "39a9aec9-0aab-4b3c-a88f-ff180ba0fd68",
+      "title": "Supprimer les fil coté desert",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:17:18.144Z",
+      "updatedAt": "2026-09-02T17:17:18.144Z"
     }
   ]
 }
