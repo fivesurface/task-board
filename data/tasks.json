@@ -363,6 +363,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:18:44.510Z",
       "updatedAt": "2026-09-02T17:18:44.510Z"
+    },
+    {
+      "id": "83f7885e-770a-4b1d-8c6a-ec983ec7ae12",
+      "title": "Propser les abtiment test",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:18:53.392Z",
+      "updatedAt": "2026-09-02T17:18:53.392Z"
     }
   ]
 }
