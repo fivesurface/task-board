@@ -405,6 +405,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:22:01.794Z",
       "updatedAt": "2026-09-02T17:22:01.794Z"
+    },
+    {
+      "id": "9d75d272-c62a-43af-8349-e8b36b7a8ebf",
+      "title": "Refaire un peu les decal route",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:22:12.196Z",
+      "updatedAt": "2026-09-02T17:22:12.196Z"
     }
   ]
 }
