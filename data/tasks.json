@@ -321,6 +321,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:17:45.475Z",
       "updatedAt": "2026-09-02T17:17:45.475Z"
+    },
+    {
+      "id": "15d2f978-14b9-4383-8d1e-0f90b7512a9b",
+      "title": "Faire les navmesh",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:18:00.080Z",
+      "updatedAt": "2026-09-02T17:18:00.080Z"
     }
   ]
 }
