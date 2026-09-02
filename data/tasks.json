@@ -307,6 +307,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:17:18.144Z",
       "updatedAt": "2026-09-02T17:17:18.144Z"
+    },
+    {
+      "id": "3e4761e5-6a43-4307-be48-2f6c6c9274cb",
+      "title": "Commener a faire el terrain avec tunel etc",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:17:45.475Z",
+      "updatedAt": "2026-09-02T17:17:45.475Z"
     }
   ]
 }
