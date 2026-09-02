@@ -377,6 +377,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:18:53.392Z",
       "updatedAt": "2026-09-02T17:18:53.392Z"
+    },
+    {
+      "id": "c666dc37-a159-4e1e-8eff-3c84e3d39f77",
+      "title": "Continuer le props des route etc",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:19:46.545Z",
+      "updatedAt": "2026-09-02T17:19:46.545Z"
     }
   ]
 }
