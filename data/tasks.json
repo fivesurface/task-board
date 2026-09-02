@@ -335,6 +335,20 @@
       "screenshots": [],
       "createdAt": "2026-09-02T17:18:00.080Z",
       "updatedAt": "2026-09-02T17:18:00.080Z"
+    },
+    {
+      "id": "1aad571f-a26a-4e88-a437-fa795636b348",
+      "title": "Faire les LOD road + poteau electrique",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": null,
+      "screenshots": [],
+      "createdAt": "2026-09-02T17:18:18.007Z",
+      "updatedAt": "2026-09-02T17:18:18.007Z"
     }
   ]
 }
