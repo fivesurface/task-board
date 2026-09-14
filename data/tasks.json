@@ -413,12 +413,12 @@
       "labels": [],
       "description": "",
       "urgency": "moyen",
-      "status": "todo",
+      "status": "done",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": null,
       "screenshots": [],
       "createdAt": "2026-09-02T17:22:12.196Z",
-      "updatedAt": "2026-09-02T17:22:12.196Z"
+      "updatedAt": "2026-09-14T23:01:40.423Z"
     }
   ]
 }
