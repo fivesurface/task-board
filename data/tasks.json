@@ -483,14 +483,14 @@
       "labels": [],
       "description": "",
       "urgency": "moyen",
-      "status": "todo",
+      "status": "doing",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": "2026-09-15",
       "screenshots": [
         "https://raw.githubusercontent.com/fivesurface/task-board/main/data/images/new-1789496372936-1789496373125-g104g-image.jpg"
       ],
       "createdAt": "2026-09-15T18:19:36.111Z",
-      "updatedAt": "2026-09-15T18:19:36.111Z"
+      "updatedAt": "2026-09-15T20:53:21.990Z"
     }
   ]
 }
