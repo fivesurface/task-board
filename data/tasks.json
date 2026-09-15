@@ -441,12 +441,12 @@
       "labels": [],
       "description": "",
       "urgency": "moyen",
-      "status": "todo",
+      "status": "done",
       "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
       "dueDate": "2026-09-16",
       "screenshots": [],
       "createdAt": "2026-09-14T23:04:35.915Z",
-      "updatedAt": "2026-09-14T23:04:35.915Z"
+      "updatedAt": "2026-09-15T17:51:00.614Z"
     }
   ]
 }
