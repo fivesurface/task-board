@@ -461,6 +461,20 @@
       "screenshots": [],
       "createdAt": "2026-09-15T17:51:36.548Z",
       "updatedAt": "2026-09-15T18:16:06.149Z"
+    },
+    {
+      "id": "37ee7ae6-ac07-466a-b287-242b53e47544",
+      "title": "edit colision road vanilla cote shop",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-09-16",
+      "screenshots": [],
+      "createdAt": "2026-09-15T18:18:42.361Z",
+      "updatedAt": "2026-09-15T18:18:42.361Z"
     }
   ]
 }
