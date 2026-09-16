@@ -491,6 +491,20 @@
       ],
       "createdAt": "2026-09-15T18:19:36.111Z",
       "updatedAt": "2026-09-15T21:05:00.689Z"
+    },
+    {
+      "id": "8831e9df-52fc-4c33-ab8f-f5b83b6c2de1",
+      "title": "Faire la grass sur les terreplien",
+      "project": "Cooper Hills",
+      "labels": [],
+      "description": "",
+      "urgency": "moyen",
+      "status": "todo",
+      "assigneeId": "7b396986-3338-40f3-8db9-5bb9ec063274",
+      "dueDate": "2026-09-17",
+      "screenshots": [],
+      "createdAt": "2026-09-16T12:24:13.054Z",
+      "updatedAt": "2026-09-16T12:24:13.054Z"
     }
   ]
 }
